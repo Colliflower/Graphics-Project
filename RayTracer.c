@@ -165,6 +165,8 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
    rb = dot(&b,&r);
    if (rb < 0)
     rb = 0;
+   else
+    rb = 1;
    R += obj->col.R*(obj->alb.ra + obj->alb.rd*d) + 5*obj->alb.rs*pow(rb,obj->shinyness);
    G += obj->col.G*(obj->alb.ra + obj->alb.rd*d) + 5*obj->alb.rs*pow(rb,obj->shinyness);
    B += obj->col.B*(obj->alb.ra + obj->alb.rd*d) + 5*obj->alb.rs*pow(rb,obj->shinyness);
