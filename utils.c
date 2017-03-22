@@ -90,6 +90,7 @@ inline void normalTransform(struct point3D *n_orig, struct point3D *n_transforme
   memcpy(n_transformed,n_orig,sizeof(struct point3D));
  matVecMult(TT, n_transformed);
  n_transformed->pw = 0;
+ normalize(n_transformed);
 }
 
 /////////////////////////////////////////////
@@ -201,7 +202,7 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
  }
  n->px = 0;
  n->py = 0;
- n->pz = 1;
+ n->pz = -1;
  n->pw = 0;
  normalTransform(n,n,plane);
  normalize(n);
@@ -229,9 +230,9 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
   return;
  }
  *lambda = (-B - sqrt(B*B - 4*A*C))/(2*A);
- n->px = -(modelRay.p0.px + *lambda*modelRay.d.px);
- n->py = -(modelRay.p0.py + *lambda*modelRay.d.py);
- n->pz = -(modelRay.p0.pz + *lambda*modelRay.d.pz);
+ n->px = (modelRay.p0.px + *lambda*modelRay.d.px);
+ n->py = (modelRay.p0.py + *lambda*modelRay.d.py);
+ n->pz = (modelRay.p0.pz + *lambda*modelRay.d.pz);
  n->pw = 0;
  normalTransform(n,n,sphere);
  normalize(n);

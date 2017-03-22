@@ -101,6 +101,13 @@ void buildScene(void)
  p.pw=1;
  l=newPLS(&p,.95,.95,.95);
  insertPLS(l,&light_list);
+ p.px=-10;
+ p.py=15.5;
+ p.pz=-10;
+ p.pw=1;
+ l=newPLS(&p,.95,.95,.95);
+ insertPLS(l,&light_list);
+
 
  // End of simple scene for Assignment 3
  // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
@@ -145,33 +152,44 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   double alpha = 2;
   double norm;
   int count = 0;
+  double lambda;
   R = 0;
   G = 0;
   B = 0;
   while (currLight) {
-   memcpy(&s, p, sizeof(point3D));
-   subVectors(&currLight->p0,&s);
+   memcpy(&s, &currLight->p0, sizeof(point3D));
+   subVectors(p,&s);
    normalize(&s);
-   d = dot(&s,n);
-   if (d < 0)
-    d = 0;
-   r.px = -ray->d.px + 2*d*n->px;
-   r.py = -ray->d.py + 2*d*n->py;
-   r.pz = -ray->d.pz + 2*d*n->pz;
-   normalize(&r);
-   memcpy(&b, p, sizeof(point3D));
-   subVectors(&ray->p0, &b);
-   normalize(&b);
-   rb = dot(&b,&r);
-   if (rb < 0)
-    rb = 0;
-   else
-    rb = 1;
-   R += obj->col.R*(obj->alb.ra + obj->alb.rd*d) + 5*obj->alb.rs*pow(rb,obj->shinyness);
-   G += obj->col.G*(obj->alb.ra + obj->alb.rd*d) + 5*obj->alb.rs*pow(rb,obj->shinyness);
-   B += obj->col.B*(obj->alb.ra + obj->alb.rd*d) + 5*obj->alb.rs*pow(rb,obj->shinyness);
-   currLight = currLight->next;
-   count++;
+   s.pw = 0;
+   struct ray3D *shadow_ray = newRay(p,&s);
+   struct object3D *o;
+   struct point3D inter_p;
+   struct point3D inter_n;
+   findFirstHit(shadow_ray,&lambda,obj,&o,&inter_p,&inter_n,NULL,NULL);
+   if(lambda > 0) {
+    R += currLight->col.R*obj->col.R*obj->alb.ra;
+    G += currLight->col.G*obj->col.G*obj->alb.ra;
+    B += currLight->col.B*obj->col.B*obj->alb.ra;
+    currLight = currLight->next;
+    count++;
+   }
+   else {
+    d = dot(&s,n);
+    if (d < 0)
+     d = 0;
+    r.px = -s.px + 2*d*n->px;
+    r.py = -s.py + 2*d*n->py;
+    r.pz = -s.pz + 2*d*n->pz;
+    normalize(&r);
+    rb = -dot(&ray->d,&r);
+    if (rb < 0)
+     rb = 0;
+    R += currLight->col.R*(obj->col.R*(obj->alb.ra + obj->alb.rd*d) + obj->alb.rs*pow(rb,obj->shinyness));
+    G += currLight->col.G*(obj->col.G*(obj->alb.ra + obj->alb.rd*d) + obj->alb.rs*pow(rb,obj->shinyness));
+    B += currLight->col.B*(obj->col.B*(obj->alb.ra + obj->alb.rd*d) + obj->alb.rs*pow(rb,obj->shinyness));
+    currLight = currLight->next;
+    count++;
+   }
   }
   R = R/count;
   G = G/count;
@@ -278,11 +296,31 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  findFirstHit(ray, &lambda, NULL, &obj, &p, &n, &a, &b);
  if (lambda > 0) {
   rtShade(obj, &p, &n, ray, depth, lambda, b, col);
+  struct colourRGB reflcol;
+  struct point3D r;
+  struct ray3D *reflray;
+  double d  = dot(&ray->d, &n);
+  r.px = ray->d.px - 2*d*n.px;
+  r.py = ray->d.py - 2*d*n.py;
+  r.pz = ray->d.pz - 2*d*n.pz;
+  reflray = newRay(&p, &r);
+  rayTrace(reflray, depth+1, &reflcol, obj);
+  if (reflcol.R != -1) {
+   col->R += obj->alb.rg*reflcol.R;
+   col->G += obj->alb.rg*reflcol.G;
+   col->B += obj->alb.rg*reflcol.B;
+  }
+  if (col->R > 1)
+   col->R = 1;
+  if (col->G > 1)
+   col->G = 1;
+  if (col->B > 1)
+   col->B = 1;
  }
  else {
-  col->R = 0;
-  col->G = 0;
-  col->B = 0;
+  col->R = -1;
+  col->G = -1;
+  col->B = -1;
  }
 }
 
@@ -305,7 +343,7 @@ int main(int argc, char *argv[])
  struct ray3D *ray;		// Structure to keep the ray from e to a pixel
  struct colourRGB col;		// Return colour for raytraced pixels
  struct colourRGB background;   // Background colour
- int i,j;			// Counters for pixel coordinates
+ int i,j,k,l;			// Counters for pixel coordinates
  unsigned char *rgbIm;
 
  if (argc<5)
@@ -428,32 +466,68 @@ int main(int argc, char *argv[])
  struct point3D p0;
  struct object3D Os;
  fprintf(stderr,"Rendering row: ");
+ struct colourRGB pixelcol;
+ double jitter_x, jitter_y;
+ double aa_res = atoi(argv[3]);
  for (j=0;j<sx;j++)		// For each of the pixels in the image
  {
   fprintf(stderr,"%d/%d, ",j,sx);
   for (i=0;i<sx;i++)
   {
-   ///////////////////////////////////////////////////////////////////
-   // TO DO - complete the code that should be in this loop to do the
-   //         raytracing!
-   ////////////////a///////////////////////////////////////////////////
-   d.px = 4.0f/3.0f*(-sx/2 + i + 0.5)/sx;
-   d.py = 4.0f/3.0f*(-sx/2 + j + 0.5)/sx;
-   d.pz = -1;
-   d.pw = 0;
-   p0.px = 0;
-   p0.py = 0;
-   p0.pz = 0;
-   p0.pw = 1;
-   matVecMult(cam->C2W, &p0);
-   matVecMult(cam->C2W, &d);
-   //printf("%f, %f, %f\n",d.px,d.py,d.pz);
-   normalize(&d);
-   ray = newRay(&p0,&d);
-   rayTrace(ray, 0, &col, &Os);
-   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3] = (unsigned char)(255*col.R);
-   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 1] = (unsigned char)(255*col.G);
-   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 2] = (unsigned char)(255*col.B);
+   memset(&pixelcol,0,sizeof(colourRGB));
+   if (antialiasing) {
+    for (k=0;k<aa_res;k++) {
+     for (l=0;l<aa_res;l++) {
+      ///////////////////////////////////////////////////////////////////
+      // TO DO - complete the code that should be in this loop to do the
+      //         raytracing!
+      ////////////////a///////////////////////////////////////////////////
+      jitter_x = ((double)k + drand48())/aa_res;
+      jitter_y = ((double)l + drand48())/aa_res;
+      d.px = 4.0f/3.0f*(-sx/2 + i + jitter_x + 0.5)/sx;
+      d.py = 4.0f/3.0f*(-sx/2 + j + jitter_y + 0.5)/sx;
+      d.pz = -1;
+      d.pw = 0;
+      p0.px = 0;
+      p0.py = 0;
+      p0.pz = 0;
+      p0.pw = 1;
+      matVecMult(cam->C2W, &p0);
+      matVecMult(cam->C2W, &d);
+      //printf("%f, %f, %f\n",d.px,d.py,d.pz);
+      normalize(&d);
+      ray = newRay(&p0,&d);
+      rayTrace(ray, 0, &col, &Os);
+      if (col.R >= 0) {
+       pixelcol.R += col.R;
+       pixelcol.G += col.G;
+       pixelcol.B += col.B;
+      }
+     }
+    }
+    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3] = (unsigned char)(255*pixelcol.R/pow(aa_res,2));
+    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 1] = (unsigned char)(255*pixelcol.G/pow(aa_res,2));
+    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 2] = (unsigned char)(255*pixelcol.B/pow(aa_res,2));
+   }
+   else {
+    d.px = 4.0f/3.0f*(-sx/2 + i + 0.5)/sx;
+    d.py = 4.0f/3.0f*(-sx/2 + j + 0.5)/sx;
+    d.pz = -1;
+    d.pw = 0;
+    p0.px = 0;
+    p0.py = 0;
+    p0.pz = 0;
+    p0.pw = 1;
+    matVecMult(cam->C2W, &p0);
+    matVecMult(cam->C2W, &d);
+    //printf("%f, %f, %f\n",d.px,d.py,d.pz);
+    normalize(&d);
+    ray = newRay(&p0,&d);
+    rayTrace(ray, 0, &pixelcol, &Os);
+    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3] = (unsigned char)(255*pixelcol.R);
+    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 1] = (unsigned char)(255*pixelcol.G);
+    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 2] = (unsigned char)(255*pixelcol.B);
+   }
   } // end for i
  } // end for j
 
