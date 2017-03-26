@@ -196,13 +196,13 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
  *lambda = -modelRay.p0.pz/modelRay.d.pz;
  p->px = modelRay.p0.px + *lambda*modelRay.d.px;
  p->py = modelRay.p0.py + *lambda*modelRay.d.py;
- if (abs(p->px) > 0.5 || abs(p->py) > 0.5) {
+/* if (fabs(p->px) > 1 || fabs(p->py) > 1) {
   *lambda = -1;
   return;
- }
+ }*/
  n->px = 0;
  n->py = 0;
- n->pz = -1;
+ n->pz = 1;
  n->pw = 0;
  normalTransform(n,n,plane);
  normalize(n);
@@ -341,7 +341,71 @@ void addAreaLight(float sx, float sy, float nx, float ny, float nz,\
   // TO DO: (Assignment 4!)
   // Implement this function to enable area light sources
   /////////////////////////////////////////////////////
+  struct object3D *o = newPlane(1,0,0,0,r,g,b,1,1,0);
+  Scale(o,sx,sy,1);
+  struct point3D u,v,w;
+  double R[4][4];
+  u.px = nx;
+  u.py = ny;
+  u.pz = nz;
+  u.pw = 0;
+  if (fabs(nx) <= fabs(ny) && fabs(nx) <= fabs(nz)) {
+   v.px = 0;
+   v.py = -nz;
+   v.pz = ny;
+   v.pw = 0;
+  }
+  else if (fabs(ny) < fabs(nx) && fabs(ny) <= fabs(nz)) {
+   v.px = -nz;
+   v.py = 0;
+   v.pz = nx;
+   v.pw = 0;
+  }
+  else {
+   v.px = -ny;
+   v.py = nx;
+   v.pz = 0;
+   v.pw = 0;
+  }
+  w = *cross(&u,&v);
+  w.px = -w.px;
+  w.py = -w.py;
+  w.pz = -w.pz;
+  R[0][0] = w.px;
+  R[1][0] = w.py;
+  R[2][0] = w.pz;
+  R[3][0] = 0;
+  R[0][1] = v.px;
+  R[1][1] = v.py;
+  R[2][1] = v.pz;
+  R[3][1] = 0;
+  R[0][2] = u.px;
+  R[1][2] = u.py;
+  R[2][2] = u.pz;
+  R[3][2] = 0;
+  R[0][3] = 0;
+  R[1][3] = 0;
+  R[2][3] = 0;
+  R[3][3] = 1;
+  matMult(R,o->T);
+  Translate(o,tx,ty,tz);
+  invert(&o->T[0][0],&o->Tinv[0][0]);
+  insertObject(o,o_list);
+  struct pointLS *l;
+  struct point3D p;
 
+  int i, j;
+  for(i=0; i<lx; i++){
+   for(j=0; j<ly; j++){
+    p.px = i/(double)lx -0.5;
+    p.py = j/(double)ly -0.5;
+    p.pz = 0;
+    p.pw = 1;
+    matVecMult(o->T,&p);
+    l = newPLS(&p, r, g, b);
+    insertPLS(l,l_list);
+   }
+  }
 }
 
 ///////////////////////////////////

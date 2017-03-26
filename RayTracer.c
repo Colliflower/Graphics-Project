@@ -45,52 +45,33 @@ void buildScene(void)
 
  struct object3D *o;
  struct pointLS *l;
- struct point3D p;
+ struct point3D p; 
 
- ///////////////////////////////////////
- // TO DO: For Assignment 3 you have to use
- //        the simple scene provided
- //        here, but for Assignment 4 you
- //        *MUST* define your own scene.
- //        Part of your mark will depend
- //        on how nice a scene you
- //        create. Use the simple scene
- //        provided as a sample of how to
- //        define and position objects.
- ///////////////////////////////////////
-
- // Simple scene for Assignment 3:
- // Insert a couple of objects. A plane and two spheres
- // with some transformations.
-
- // Let's add a plane
- // Note the parameters: ra, rd, rs, rg, R, G, B, alpha, r_index, and shinyness)
- o=newPlane(.05,.75,.05,.05,.55,.8,.75,1,1,2);	// Note the plane is highly-reflective (rs=rg=.75) so we
-						// should see some reflections if all is done properly.
-						// Colour is close to cyan, and currently the plane is
-						// completely opaque (alpha=1). The refraction index is
-						// meaningless since alpha=1
- Scale(o,6,6,1);				// Do a few transforms...
+ o=newPlane(.05,.75,.05,1,.55,.8,.75,1,1,0);
+ 
+ Scale(o,6,6,1);    // Do a few transforms...
  RotateZ(o,PI/1.20);
  RotateX(o,PI/2.25);
  Translate(o,0,-3,10);
- invert(&o->T[0][0],&o->Tinv[0][0]);		// Very important! compute
-						// and store the inverse
-						// transform for this object!
- insertObject(o,&object_list);			// Insert into object list
+ invert(&o->T[0][0],&o->Tinv[0][0]);
+ insertObject(o,&object_list);
 
- // Let's add a couple spheres
- o=newSphere(.05,.95,.35,.35,1,.25,.25,1,1,6);
+ o=newSphere(.05,.95,.35,.25,1,.25,.25,1,1,15);
  Scale(o,.75,.5,1.5);
  RotateY(o,PI/2);
  Translate(o,-1.45,1.1,3.5);
  invert(&o->T[0][0],&o->Tinv[0][0]);
  insertObject(o,&object_list);
 
- o=newSphere(.05,.95,.95,.75,.75,.95,.55,1,1,6);
+ o=newSphere(.05,.95,.95,.75,.75,.95,.55,1,1,30);
  Scale(o,.5,2.0,1.0);
  RotateZ(o,PI/1.5);
  Translate(o,1.75,1.25,5.0);
+ invert(&o->T[0][0],&o->Tinv[0][0]);
+ insertObject(o,&object_list);
+
+ o=newSphere(.05,.95,.35,.75,1,1,.25,1,1,1.5);
+ Translate(o,0,2,5.5);
  invert(&o->T[0][0],&o->Tinv[0][0]);
  insertObject(o,&object_list);
 
@@ -101,13 +82,8 @@ void buildScene(void)
  p.pw=1;
  l=newPLS(&p,.95,.95,.95);
  insertPLS(l,&light_list);
- p.px=-10;
- p.py=15.5;
- p.pz=-10;
- p.pw=1;
- l=newPLS(&p,.95,.95,.95);
- insertPLS(l,&light_list);
-
+  
+ //addAreaLight(1.5,1.5,0,1,0,0,15.5,-5.5,9,9,1,1,1,&object_list,&light_list);
 
  // End of simple scene for Assignment 3
  // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
@@ -156,44 +132,54 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
   R = 0;
   G = 0;
   B = 0;
-  while (currLight) {
-   memcpy(&s, &currLight->p0, sizeof(point3D));
-   subVectors(p,&s);
-   normalize(&s);
-   s.pw = 0;
-   struct ray3D *shadow_ray = newRay(p,&s);
-   struct object3D *o;
-   struct point3D inter_p;
-   struct point3D inter_n;
-   findFirstHit(shadow_ray,&lambda,obj,&o,&inter_p,&inter_n,NULL,NULL);
-   if(lambda > 0) {
-    R += currLight->col.R*obj->col.R*obj->alb.ra;
-    G += currLight->col.G*obj->col.G*obj->alb.ra;
-    B += currLight->col.B*obj->col.B*obj->alb.ra;
-    currLight = currLight->next;
-    count++;
-   }
-   else {
-    d = dot(&s,n);
-    if (d < 0)
-     d = 0;
-    r.px = -s.px + 2*d*n->px;
-    r.py = -s.py + 2*d*n->py;
-    r.pz = -s.pz + 2*d*n->pz;
-    normalize(&r);
-    rb = -dot(&ray->d,&r);
-    if (rb < 0)
-     rb = 0;
-    R += currLight->col.R*(obj->col.R*(obj->alb.ra + obj->alb.rd*d) + obj->alb.rs*pow(rb,obj->shinyness));
-    G += currLight->col.G*(obj->col.G*(obj->alb.ra + obj->alb.rd*d) + obj->alb.rs*pow(rb,obj->shinyness));
-    B += currLight->col.B*(obj->col.B*(obj->alb.ra + obj->alb.rd*d) + obj->alb.rs*pow(rb,obj->shinyness));
-    currLight = currLight->next;
-    count++;
-   }
+  if (obj->isLightSource) {
+   R = obj->col.R;
+   G = obj->col.G;
+   B = obj->col.B;
   }
-  R = R/count;
-  G = G/count;
-  B = B/count;
+  else {
+   while (currLight) {
+    memcpy(&s, &currLight->p0, sizeof(point3D));
+    subVectors(p,&s);
+    s.pw = 0;
+    struct ray3D *shadow_ray = newRay(p,&s);
+    struct object3D *o;
+    struct point3D inter_p;
+    struct point3D inter_n;
+    findFirstHit(shadow_ray,&lambda,obj,&o,&inter_p,&inter_n,NULL,NULL,1);
+    if(lambda > 0 && lambda < 1) {
+     R += currLight->col.R*obj->col.R*obj->alb.ra;
+     G += currLight->col.G*obj->col.G*obj->alb.ra;
+     B += currLight->col.B*obj->col.B*obj->alb.ra;
+    }
+    else {
+     normalize(&s);
+     d = dot(&s,n);
+     if (obj->frontAndBack)
+      d = fabs(d);
+     else if (d < 0)
+      d = 0;
+     r.px = -s.px + 2*d*n->px;
+     r.py = -s.py + 2*d*n->py;
+     r.pz = -s.pz + 2*d*n->pz;
+     normalize(&r);
+     rb = -dot(&ray->d,&r);
+     if (obj->frontAndBack)
+      rb = fabs(rb);
+     else if (rb < 0)
+      rb = 0;
+     R += currLight->col.R*(obj->col.R*(obj->alb.ra + obj->alb.rd*d) + obj->alb.rs*pow(rb,obj->shinyness));
+     G += currLight->col.G*(obj->col.G*(obj->alb.ra + obj->alb.rd*d) + obj->alb.rs*pow(rb,obj->shinyness));
+     B += currLight->col.B*(obj->col.B*(obj->alb.ra + obj->alb.rd*d) + obj->alb.rs*pow(rb,obj->shinyness));
+    }
+    currLight = currLight->next;
+    count++;
+    free(shadow_ray);
+   }
+   R = R/count;
+   G = G/count;
+   B = B/count;
+  }
   if (R > 1)
    R = 1;
   if (G > 1)
@@ -220,7 +206,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
 
 }
 
-void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b)
+void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b, char shadowFlag)
 {
  // Find the closest intersection between the ray and any objects in the scene.
  // It returns:
@@ -245,7 +231,7 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
  struct point3D normal;
  while (currObj) {
   currObj->intersect(currObj, ray, &nextLambda,  &intersect, &normal, NULL, NULL);
-  if (nextLambda > 0 && nextLambda < currLambda && currObj != Os) {
+  if (nextLambda > 0 && nextLambda < currLambda && currObj != Os && (!currObj->isLightSource || !shadowFlag)) {
    currLambda = nextLambda;
    *obj = currObj;
    *p = intersect;
@@ -280,6 +266,8 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  struct point3D p;	// Intersection point
  struct point3D n;	// Normal at intersection
  struct colourRGB I;	// Colour returned by shading function
+ int num_refls = 10;
+ int i;
 
  if (depth>MAX_DEPTH)	// Max recursion depth reached. Return invalid colour.
  {
@@ -293,22 +281,49 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  // TO DO: Complete this function. Refer to the notes
  // if you are unsure what to do here.
  ///////////////////////////////////////////////////////a
- findFirstHit(ray, &lambda, NULL, &obj, &p, &n, &a, &b);
+ findFirstHit(ray, &lambda, Os, &obj, &p, &n, &a, &b, 0);
  if (lambda > 0) {
   rtShade(obj, &p, &n, ray, depth, lambda, b, col);
   struct colourRGB reflcol;
-  struct point3D r;
+  struct colourRGB collector;
+  memset(&collector, 0, sizeof(struct colourRGB));
+  struct point3D r,*u,*v;
   struct ray3D *reflray;
   double d  = dot(&ray->d, &n);
-  r.px = ray->d.px - 2*d*n.px;
-  r.py = ray->d.py - 2*d*n.py;
-  r.pz = ray->d.pz - 2*d*n.pz;
-  reflray = newRay(&p, &r);
-  rayTrace(reflray, depth+1, &reflcol, obj);
-  if (reflcol.R != -1) {
-   col->R += obj->alb.rg*reflcol.R;
-   col->G += obj->alb.rg*reflcol.G;
-   col->B += obj->alb.rg*reflcol.B;
+  if (obj->alb.rg != 0) {
+   for (i = 0; i < num_refls; i++) {
+    r.px = ray->d.px - 2*d*n.px;
+    r.py = ray->d.py - 2*d*n.py;
+    r.pz = ray->d.pz - 2*d*n.pz;
+    normalize(&r);
+    u = cross(&r,&n);
+    v = cross(&r,u);
+    double theta, phi, roughness, x, y, z;
+    roughness = (1-tanh(obj->shinyness/5-3))/2;
+    theta = M_PI*roughness*drand48();
+    phi = 2*M_PI*roughness*drand48();
+    x = sin(theta)*cos(phi);
+    y = sin(theta)*sin(phi);
+    z = cos(theta);
+    r.px = u->px*x + v->px*y + r.px*z;
+    r.py = u->py*x + v->py*y + r.py*z;
+    r.pz = u->pz*x + v->pz*y + r.pz*z;
+    r.pw = 0;
+    free(u);
+    free(v);
+    normalize(&r);
+    reflray = newRay(&p, &r);
+    rayTrace(reflray, depth+1, &reflcol, obj);
+    free(reflray);
+    if (reflcol.R != -1) {
+     collector.R += reflcol.R;
+     collector.G += reflcol.G;
+     collector.B += reflcol.B;
+    }
+   }
+   col->R += obj->alb.rg*collector.R/(double)num_refls;
+   col->G += obj->alb.rg*collector.G/(double)num_refls;
+   col->B += obj->alb.rg*collector.B/(double)num_refls;
   }
   if (col->R > 1)
    col->R = 1;
@@ -338,11 +353,7 @@ int main(int argc, char *argv[])
  struct point3D g;
  struct point3D up;
  double du, dv;			// Increase along u and v directions for pixel coordinates
- struct point3D pc,d;		// Point structures to keep the coordinates of a pixel and
-				// the direction or a ray
- struct ray3D *ray;		// Structure to keep the ray from e to a pixel
- struct colourRGB col;		// Return colour for raytraced pixels
- struct colourRGB background;   // Background colour
+  struct colourRGB background;   // Background colour
  int i,j,k,l;			// Counters for pixel coordinates
  unsigned char *rgbIm;
 
@@ -463,74 +474,80 @@ int main(int argc, char *argv[])
  printmatrix(cam->W2C);
  fprintf(stderr,"\n");
 
- struct point3D p0;
- struct object3D Os;
+ 
  fprintf(stderr,"Rendering row: ");
- struct colourRGB pixelcol;
- double jitter_x, jitter_y;
  double aa_res = atoi(argv[3]);
+ if (!antialiasing)
+  aa_res = 1;
+ struct colourRGB **pixelcol;
+ pixelcol = (struct colourRGB **)malloc(sizeof(struct colourRGB *)*sx);
+ for (j=0; j<sx; j++) {
+  pixelcol[j] = (struct colourRGB *)calloc(sizeof(struct colourRGB),sx);
+ }
+ //#pragma omp parallel for
  for (j=0;j<sx;j++)		// For each of the pixels in the image
  {
-  fprintf(stderr,"%d/%d, ",j,sx);
+  fprintf(stderr,"%d/%d, ",1+j,sx);
   for (i=0;i<sx;i++)
   {
-   memset(&pixelcol,0,sizeof(colourRGB));
-   if (antialiasing) {
-    for (k=0;k<aa_res;k++) {
-     for (l=0;l<aa_res;l++) {
-      ///////////////////////////////////////////////////////////////////
-      // TO DO - complete the code that should be in this loop to do the
-      //         raytracing!
-      ////////////////a///////////////////////////////////////////////////
+   //fprintf(stderr,"%d, %d  ",i,j);
+   for (k=0;k<aa_res;k++) {
+    for (l=0;l<aa_res;l++) {
+     struct point3D p0;
+     double jitter_x, jitter_y;
+     struct point3D pc,d;		// Point structures to keep the coordinates of a pixel and
+                           // the direction or a ray
+     struct ray3D *ray;		// Structure to keep the ray from e to a pixel
+     struct colourRGB col;		// Return colour for raytraced pixels
+     //struct object3D Os;
+     ///////////////////////////////////////////////////////////////////
+     // TO DO - complete the code that should be in this loop to do the
+     //         raytracing!
+     ////////////////a///////////////////////////////////////////////////
+     if (antialiasing) {
       jitter_x = ((double)k + drand48())/aa_res;
       jitter_y = ((double)l + drand48())/aa_res;
-      d.px = 4.0f/3.0f*(-sx/2 + i + jitter_x + 0.5)/sx;
-      d.py = 4.0f/3.0f*(-sx/2 + j + jitter_y + 0.5)/sx;
-      d.pz = -1;
-      d.pw = 0;
-      p0.px = 0;
-      p0.py = 0;
-      p0.pz = 0;
-      p0.pw = 1;
-      matVecMult(cam->C2W, &p0);
-      matVecMult(cam->C2W, &d);
-      //printf("%f, %f, %f\n",d.px,d.py,d.pz);
-      normalize(&d);
-      ray = newRay(&p0,&d);
-      rayTrace(ray, 0, &col, &Os);
-      if (col.R >= 0) {
-       pixelcol.R += col.R;
-       pixelcol.G += col.G;
-       pixelcol.B += col.B;
-      }
+     }
+     else {
+      jitter_x = 0;
+      jitter_y = 0;
+     }
+     d.px = 4.0f/3.0f*(-((double)sx)/2 + i + jitter_x + 0.5)/(double)sx;
+     d.py = 4.0f/3.0f*(-((double)sx)/2 + j + jitter_y + 0.5)/(double)sx;
+     d.pz = -1;
+     d.pw = 0;
+     p0.px = 0;
+     p0.py = 0;
+     p0.pz = 0;
+     p0.pw = 1;
+     matVecMult(cam->C2W, &p0);
+     matVecMult(cam->C2W, &d);
+     //printf("%f, %f, %f\n",d.px,d.py,d.pz);
+     normalize(&d);
+     ray = newRay(&p0,&d);
+     //rayTrace(ray, 0, &col, NULL);
+     col.R = i/(double)sx;
+     col.G = j/(double)sx;
+     col.B = fabs(sin(i+j));
+     free(ray);
+     if (col.R >= 0) {
+      pixelcol[j][i].R = col.R;
+      pixelcol[j][i].G = col.G;
+      pixelcol[j][i].B = col.B;
      }
     }
-    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3] = (unsigned char)(255*pixelcol.R/pow(aa_res,2));
-    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 1] = (unsigned char)(255*pixelcol.G/pow(aa_res,2));
-    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 2] = (unsigned char)(255*pixelcol.B/pow(aa_res,2));
-   }
-   else {
-    d.px = 4.0f/3.0f*(-sx/2 + i + 0.5)/sx;
-    d.py = 4.0f/3.0f*(-sx/2 + j + 0.5)/sx;
-    d.pz = -1;
-    d.pw = 0;
-    p0.px = 0;
-    p0.py = 0;
-    p0.pz = 0;
-    p0.pw = 1;
-    matVecMult(cam->C2W, &p0);
-    matVecMult(cam->C2W, &d);
-    //printf("%f, %f, %f\n",d.px,d.py,d.pz);
-    normalize(&d);
-    ray = newRay(&p0,&d);
-    rayTrace(ray, 0, &pixelcol, &Os);
-    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3] = (unsigned char)(255*pixelcol.R);
-    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 1] = (unsigned char)(255*pixelcol.G);
-    ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 2] = (unsigned char)(255*pixelcol.B);
    }
   } // end for i
  } // end for j
-
+ for (j=0;j<sx;j++) {
+  for (i=0; i<sx; i++) {
+   //fprintf(stderr,"%d,%d  ",i,j);
+   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3] = (unsigned char)(255*pixelcol[j][i].R/pow(aa_res,2));
+   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 1] = (unsigned char)(255*pixelcol[j][i].G/pow(aa_res,2));
+   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 2] = (unsigned char)(255*pixelcol[j][i].B/pow(aa_res,2));
+  }
+ }
+ 
  fprintf(stderr,"\nDone!\n");
 
  // Output rendered image
