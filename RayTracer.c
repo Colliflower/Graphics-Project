@@ -75,15 +75,15 @@ void buildScene(void)
  invert(&o->T[0][0],&o->Tinv[0][0]);
  insertObject(o,&object_list);
 
- // Insert a single point light source.
+/* // Insert a single point light source.
  p.px=0;
  p.py=15.5;
  p.pz=-5.5;
  p.pw=1;
  l=newPLS(&p,.95,.95,.95);
- insertPLS(l,&light_list);
+ insertPLS(l,&light_list);*/
   
- //addAreaLight(1.5,1.5,0,1,0,0,15.5,-5.5,9,9,1,1,1,&object_list,&light_list);
+ addAreaLight(1.5,1.5,0,1,0,0,15.5,-5.5,9,9,1,1,1,&object_list,&light_list);
 
  // End of simple scene for Assignment 3
  // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
@@ -266,8 +266,7 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  struct point3D p;	// Intersection point
  struct point3D n;	// Normal at intersection
  struct colourRGB I;	// Colour returned by shading function
- int num_refls = 10;
- int i;
+ int num_refls = 40;
 
  if (depth>MAX_DEPTH)	// Max recursion depth reached. Return invalid colour.
  {
@@ -291,7 +290,7 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
   struct ray3D *reflray;
   double d  = dot(&ray->d, &n);
   if (obj->alb.rg != 0) {
-   for (i = 0; i < num_refls; i++) {
+   for (int i = 0; i < num_refls; i++) {
     r.px = ray->d.px - 2*d*n.px;
     r.py = ray->d.py - 2*d*n.py;
     r.pz = ray->d.pz - 2*d*n.pz;
@@ -479,20 +478,17 @@ int main(int argc, char *argv[])
  double aa_res = atoi(argv[3]);
  if (!antialiasing)
   aa_res = 1;
- struct colourRGB **pixelcol;
- pixelcol = (struct colourRGB **)malloc(sizeof(struct colourRGB *)*sx);
- for (j=0; j<sx; j++) {
-  pixelcol[j] = (struct colourRGB *)calloc(sizeof(struct colourRGB),sx);
- }
- //#pragma omp parallel for
- for (j=0;j<sx;j++)		// For each of the pixels in the image
+ #pragma omp parallel for
+ for (int j=0;j<sx;j++)		// For each of the pixels in the image
  {
   fprintf(stderr,"%d/%d, ",1+j,sx);
-  for (i=0;i<sx;i++)
+  for (int i=0;i<sx;i++)
   {
    //fprintf(stderr,"%d, %d  ",i,j);
-   for (k=0;k<aa_res;k++) {
-    for (l=0;l<aa_res;l++) {
+   struct colourRGB pixelcol;
+   memset(&pixelcol,0,sizeof(struct colourRGB));
+   for (int k=0;k<aa_res;k++) {
+    for (int l=0;l<aa_res;l++) {
      struct point3D p0;
      double jitter_x, jitter_y;
      struct point3D pc,d;		// Point structures to keep the coordinates of a pixel and
@@ -525,28 +521,24 @@ int main(int argc, char *argv[])
      //printf("%f, %f, %f\n",d.px,d.py,d.pz);
      normalize(&d);
      ray = newRay(&p0,&d);
-     //rayTrace(ray, 0, &col, NULL);
-     col.R = i/(double)sx;
+     rayTrace(ray, 0, &col, NULL);
+     /*col.R = i/(double)sx;
      col.G = j/(double)sx;
-     col.B = fabs(sin(i+j));
+     col.B = fabs(sin(i+j));*/
      free(ray);
      if (col.R >= 0) {
-      pixelcol[j][i].R = col.R;
-      pixelcol[j][i].G = col.G;
-      pixelcol[j][i].B = col.B;
+      pixelcol.R += col.R;
+      pixelcol.G += col.G;
+      pixelcol.B += col.B;
      }
     }
    }
+   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3] = (unsigned char)(255*pixelcol.R/pow(aa_res,2));
+   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 1] = (unsigned char)(255*pixelcol.G/pow(aa_res,2));
+   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 2] = (unsigned char)(255*pixelcol.B/pow(aa_res,2));
   } // end for i
  } // end for j
- for (j=0;j<sx;j++) {
-  for (i=0; i<sx; i++) {
-   //fprintf(stderr,"%d,%d  ",i,j);
-   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3] = (unsigned char)(255*pixelcol[j][i].R/pow(aa_res,2));
-   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 1] = (unsigned char)(255*pixelcol[j][i].G/pow(aa_res,2));
-   ((unsigned char *)im->rgbdata)[((sx-j-1)*sx + i)*3 + 2] = (unsigned char)(255*pixelcol[j][i].B/pow(aa_res,2));
-  }
- }
+
  
  fprintf(stderr,"\nDone!\n");
 
