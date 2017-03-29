@@ -233,10 +233,10 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
  *lambda = -modelRay.p0.pz/modelRay.d.pz;
  p->px = modelRay.p0.px + *lambda*modelRay.d.px;
  p->py = modelRay.p0.py + *lambda*modelRay.d.py;
-/* if (fabs(p->px) > 1 || fabs(p->py) > 1) {
+ if (fabs(p->px) > 1 || fabs(p->py) > 1) {
   *lambda = -1;
   return;
- }*/
+ }
  n->px = 0;
  n->py = 0;
  n->pz = 1;
