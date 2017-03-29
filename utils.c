@@ -173,6 +173,43 @@ struct object3D *newSphere(double ra, double rd, double rs, double rg, double r,
  return(sphere);
 }
 
+struct object3D *newCylinder(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny)
+{
+ // Intialize a new plane with the specified parameters:
+ // ra, rd, rs, rg - Albedos for the components of the Phong model
+ // r, g, b, - Colour for this plane
+ // alpha - Transparency, must be set to 1 unless you are doing refraction
+ // r_index - Refraction index if you are doing refraction.
+ // shiny - Exponent for the specular component of the Phong model
+ //
+ // The cylinder is center-aligned with the z axis, with radius 1, and height 1
+
+ struct object3D *cylinder=(struct object3D *)calloc(1,sizeof(struct object3D));
+
+ if (!plane) fprintf(stderr,"Unable to allocate new cylinder, out of memory!\n");
+ else
+ {
+  cylinder->alb.ra=ra;
+  cylinder->alb.rd=rd;
+  cylinder->alb.rs=rs;
+  cylinder->alb.rg=rg;
+  cylinder->col.R=r;
+  cylinder->col.G=g;
+  cylinder->col.B=b;
+  cylinder->alpha=alpha;
+  cylinder->r_index=r_index;
+  cylinder->shinyness=shiny;
+  cylinder->intersect=&cylinderIntersect;
+  cylinder->texImg=NULL;
+  memcpy(&cylinder->T[0][0],&eye4x4[0][0],16*sizeof(double));
+  memcpy(&cylinder->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
+  cylinder->textureMap=&texMap;
+  cylinder->frontAndBack=0;
+  cylinder->isLightSource=0;
+ }
+ return(plane);
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 // TO DO:
 //	Complete the functions that compute intersections for the canonical plane
@@ -235,6 +272,38 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
  n->pz = (modelRay.p0.pz + *lambda*modelRay.d.pz);
  n->pw = 0;
  normalTransform(n,n,sphere);
+ normalize(n);
+ p->px = ray->p0.px + *lambda*ray->d.px;
+ p->py = ray->p0.py + *lambda*ray->d.py;
+ p->pz = ray->p0.pz + *lambda*ray->d.pz;
+ p->pw = 1;
+}
+
+void cylinderIntersect(struct object3D *cylinder, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b)
+{
+ // Computes and returns the value of 'lambda' at the intersection
+ // between the specified ray and the specified canonical sphere.
+
+ struct ray3D modelRay;
+ rayTransform(ray,&modelRay,sphere);
+ double A = pow(modelRay.d.px,2)+pow(modelRay.d.py,2);
+ double B = 2(modelRay.d.px*modelRay.p0.px + modelRay.d.py*modelRay.p0.py);
+ double C = pow(modelRay.p0.px,2) + pow(modelRay.p0.py,2) - 1;
+ if (B*B < 4*A*C) {
+  *lambda = -1;
+  return;
+ }
+ *lambda = (-B - sqrt(B*B - 4*A*C))/(2*A);
+ struct point3D poi;
+ poi.px = modelRay.p0.px + *lambda*modelRay.d.px;
+ poi.py = modelRay.p0.py + *lambda*modelRay.d.py;
+ poi.pz = modelRay.p0.pz + *lambda*modelRay.d.pz;
+ poi.pw = 0;
+ n->px = (modelRay.p0.px + *lambda*modelRay.d.px);
+ n->py = (modelRay.p0.py + *lambda*modelRay.d.py);
+ n->pz = (modelRay.p0.pz + *lambda*modelRay.d.pz);
+ n->pw = 0;
+ normalTransform(n,n,cylinder);
  normalize(n);
  p->px = ray->p0.px + *lambda*ray->d.px;
  p->py = ray->p0.py + *lambda*ray->d.py;
