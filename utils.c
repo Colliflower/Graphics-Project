@@ -186,7 +186,7 @@ struct object3D *newCylinder(double ra, double rd, double rs, double rg, double 
 
  struct object3D *cylinder=(struct object3D *)calloc(1,sizeof(struct object3D));
 
- if (!plane) fprintf(stderr,"Unable to allocate new cylinder, out of memory!\n");
+ if (!cylinder) fprintf(stderr,"Unable to allocate new cylinder, out of memory!\n");
  else
  {
   cylinder->alb.ra=ra;
@@ -207,7 +207,7 @@ struct object3D *newCylinder(double ra, double rd, double rs, double rg, double 
   cylinder->frontAndBack=0;
   cylinder->isLightSource=0;
  }
- return(plane);
+ return(cylinder);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -285,24 +285,47 @@ void cylinderIntersect(struct object3D *cylinder, struct ray3D *ray, double *lam
  // between the specified ray and the specified canonical sphere.
 
  struct ray3D modelRay;
- rayTransform(ray,&modelRay,sphere);
+ rayTransform(ray,&modelRay,cylinder);
  double A = pow(modelRay.d.px,2)+pow(modelRay.d.py,2);
- double B = 2(modelRay.d.px*modelRay.p0.px + modelRay.d.py*modelRay.p0.py);
+ double B = 2*(modelRay.d.px*modelRay.p0.px + modelRay.d.py*modelRay.p0.py);
  double C = pow(modelRay.p0.px,2) + pow(modelRay.p0.py,2) - 1;
  if (B*B < 4*A*C) {
   *lambda = -1;
   return;
  }
- *lambda = (-B - sqrt(B*B - 4*A*C))/(2*A);
- struct point3D poi;
- poi.px = modelRay.p0.px + *lambda*modelRay.d.px;
- poi.py = modelRay.p0.py + *lambda*modelRay.d.py;
- poi.pz = modelRay.p0.pz + *lambda*modelRay.d.pz;
- poi.pw = 0;
- n->px = (modelRay.p0.px + *lambda*modelRay.d.px);
- n->py = (modelRay.p0.py + *lambda*modelRay.d.py);
- n->pz = (modelRay.p0.pz + *lambda*modelRay.d.pz);
- n->pw = 0;
+ double lambda1 = (-B - sqrt(B*B - 4*A*C))/(2*A);
+ double z1 = modelRay.p0.pz + lambda1*modelRay.d.pz;
+ if(z1<0 || z1>1){
+   double lambda2 = (-B + sqrt(B*B - 4*A*C))/(2*A);
+   double z2 = modelRay.p0.pz + lambda2*modelRay.d.pz;
+   if(z1>1 && z2>1 || z2<0 && z1<0){ //Do intersection for a cylinder "cap"
+    *lambda = -1;
+    return;
+   }
+   else{
+    double k;
+    double lambda_length = fabs(lambda1-lambda2);
+    n->px = 0;
+    n->py = 0;
+    n->pw = 0;
+    if(z1 < z2){ //on the z=0 plane
+     n->pz = -1;
+     k = fabs(z1/(z1-z2));
+    }
+    else{ //on the z=1 plane
+     n->pz = 1;
+     k = fabs((z1-1)/(z1-z2));
+    }
+    *lambda = k*lambda_length+lambda1;
+   }
+ }
+ else{
+  *lambda = lambda1;
+  n->px = (modelRay.p0.px + *lambda*modelRay.d.px);
+  n->py = (modelRay.p0.py + *lambda*modelRay.d.py);
+  n->pz = 0;
+  n->pw = 0;
+ }
  normalTransform(n,n,cylinder);
  normalize(n);
  p->px = ray->p0.px + *lambda*ray->d.px;

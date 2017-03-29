@@ -47,9 +47,9 @@ void buildScene(void)
  struct pointLS *l;
  struct point3D p; 
 
- o=newPlane(.05,.75,.05,1,.55,.8,.75,1,1,0);
+ o=newPlane(.05,.75,.05,1,.55,.8,.75,1,1,90);
  
- Scale(o,6,6,1);    // Do a few transforms...
+ Scale(o,50,50,1);    // Do a few transforms...
  RotateZ(o,PI/1.20);
  RotateX(o,PI/2.25);
  Translate(o,0,-3,10);
@@ -75,15 +75,23 @@ void buildScene(void)
  invert(&o->T[0][0],&o->Tinv[0][0]);
  insertObject(o,&object_list);
 
-/* // Insert a single point light source.
+ o=newCylinder(.05,.95,.35,.75,1,1,.25,1,1,30);
+ Scale(o,.5,.5,1.5);
+ RotateY(o,PI/2.5);
+ RotateZ(o,PI/2);
+ Translate(o,0,-1,3);
+ invert(&o->T[0][0],&o->Tinv[0][0]);
+ insertObject(o,&object_list);
+
+// Insert a single point light source.
  p.px=0;
  p.py=15.5;
  p.pz=-5.5;
  p.pw=1;
  l=newPLS(&p,.95,.95,.95);
- insertPLS(l,&light_list);*/
+ insertPLS(l,&light_list);
   
- addAreaLight(1.5,1.5,0,1,0,0,15.5,-5.5,9,9,1,1,1,&object_list,&light_list);
+ //addAreaLight(1.5,1.5,0,1,0,0,15.5,-5.5,9,9,1,1,1,&object_list,&light_list);
 
  // End of simple scene for Assignment 3
  // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
