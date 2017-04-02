@@ -173,6 +173,45 @@ struct object3D *newSphere(double ra, double rd, double rs, double rg, double r,
  return(sphere);
 }
 
+struct object3D *newCone(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny)
+{
+ // Intialize a new cone with the specified parameters:
+ // ra, rd, rs, rg - Albedos for the components of the Phong model
+ // r, g, b, - Colour for this plane
+ // alpha - Transparency, must be set to 1 unless you are doing refraction
+ // r_index - Refraction index if you are doing refraction.
+ // shiny -Exponent for the specular component of the Phong model
+ //
+ // This is assumed to represent a cone with eqn. x^2 + y^2 = z^2 0 <= z <= 1
+ //
+
+ struct object3D *cone=(struct object3D *)calloc(1,sizeof(struct object3D));
+
+ if (!cone) fprintf(stderr,"Unable to allocate new cone, out of memory!\n");
+ else
+ {
+  cone->alb.ra=ra;
+  cone->alb.rd=rd;
+  cone->alb.rs=rs;
+  cone->alb.rg=rg;
+  cone->col.R=r;
+  cone->col.G=g;
+  cone->col.B=b;
+  cone->alpha=alpha;
+  cone->r_index=r_index;
+  cone->shinyness=shiny;
+  cone->intersect=&coneIntersect;
+  cone->texImg=NULL;
+  memcpy(&cone->T[0][0],&eye4x4[0][0],16*sizeof(double));
+  memcpy(&cone->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
+  cone->textureMap=&texMap;
+  cone->frontAndBack=0;
+  cone->isLightSource=0;
+ }
+ return(cone);
+}
+
+
 struct object3D *newCylinder(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny)
 {
  // Intialize a new plane with the specified parameters:
@@ -347,6 +386,92 @@ void loadTexture(struct object3D *o, const char *filename)
   }
   o->texImg=readPPMimage(filename);	// Allocate new texture
  }
+}
+
+void coneIntersect(struct object3D *cone, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b)
+{
+ // Computes and returns the value of 'lambda' at the intersection
+ // between the specified ray and the specified canonical sphere.
+
+ /////////////////////////////////
+ // TO DO: Complete this function.
+ /////////////////////////////////
+ struct ray3D modelRay;
+ rayTransform(ray,&modelRay,cone);
+ double A = dot(&modelRay.d, &modelRay.d) - 2*pow(modelRay.d.pz,2);
+ double B = 2*(dot(&modelRay.d, &modelRay.p0)- 2*modelRay.d.pz*modelRay.p0.pz);
+ double C = dot(&modelRay.p0, &modelRay.p0) - 2*pow(modelRay.p0.pz,2);
+ double lambda2;
+ if (B*B < 4*A*C) {
+  *lambda = -1;
+  return;
+ }
+ if (A < 0) {
+  *lambda = (-B + sqrt(B*B - 4*A*C))/(2*A);
+  lambda2 = (-B - sqrt(B*B - 4*A*C))/(2*A);
+ }
+ else {
+  *lambda = (-B - sqrt(B*B - 4*A*C))/(2*A);
+  lambda2 = (-B + sqrt(B*B - 4*A*C))/(2*A);
+ }
+ p->px = (modelRay.p0.px + *lambda*modelRay.d.px);
+ p->py = (modelRay.p0.py + *lambda*modelRay.d.py);
+ p->pz = (modelRay.p0.pz + *lambda*modelRay.d.pz);
+ p->pw = 1;
+ struct point3D p2;
+ p2.px = (modelRay.p0.px + lambda2*modelRay.d.px);
+ p2.py = (modelRay.p0.py + lambda2*modelRay.d.py);
+ p2.pz = (modelRay.p0.pz + lambda2*modelRay.d.pz);
+ p2.pw = 1;
+ if (p->pz >= 0 && p->pz <= 1 && p2.pz > 0) {
+  n->px = p->px;
+  n->py = p->py;
+  n->pz = -p->pz;
+  n->pw = 0;
+  p->px = ray->p0.px + *lambda*ray->d.px;
+  p->py = ray->p0.py + *lambda*ray->d.py;
+  p->pz = ray->p0.pz + *lambda*ray->d.pz;
+  p->pw = 1;
+ }
+ else if (p->pz > 1 || (p->pz > 0 && p2.pz < 0)) {
+  *lambda = -(modelRay.p0.pz-1)/modelRay.d.pz;
+  p->px = modelRay.p0.px + *lambda*modelRay.d.px;
+  p->py = modelRay.p0.py + *lambda*modelRay.d.py;
+  p->pz = 1;
+  p->pw = 1;
+  if (pow(p->px,2) + pow(p->py,2) > 1) {
+   *lambda = -1;
+   return;
+  }
+  n->px = 0;
+  n->py = 0;
+  n->pz = 1;
+  n->pw = 0;
+  p->px = ray->p0.px + *lambda*ray->d.px;
+  p->py = ray->p0.py + *lambda*ray->d.py;
+  p->pz = ray->p0.pz + *lambda*ray->d.pz;
+  p->pw = 1;
+ }
+ else {
+  if (p2.pz >= 0 && p2.pz <= 1) {
+   n->px = p2.px;
+   n->py = p2.py;
+   n->pz = -p2.pz;
+   n->pw = 0;
+  }
+  else { 
+   *lambda = -1;
+   return;
+  }
+  p->px = ray->p0.px + lambda2*ray->d.px;
+  p->py = ray->p0.py + lambda2*ray->d.py;
+  p->pz = ray->p0.pz + lambda2*ray->d.pz;
+  p->pw = 1;
+ }
+ normalize(n);
+ normalTransform(n,n,cone);
+ //printf("\n%f,%f,%f\n",n->px,n->py,n->pz);
+ 
 }
 
 void texMap(struct image *img, double a, double b, double *R, double *G, double *B)
