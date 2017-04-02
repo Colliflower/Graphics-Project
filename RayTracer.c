@@ -48,15 +48,14 @@ void buildScene(void)
  struct point3D p; 
 
  o=newPlane(.05,.75,.05,1,.55,.8,.75,1,1,0);
- 
  Scale(o,6,6,1);    // Do a few transforms...
- RotateZ(o,PI/1.20);
- RotateX(o,PI/2.25);
- Translate(o,0,-3,10);
+ RotateX(o,PI/2);
+ RotateY(o,PI/8);
+ Translate(o,0,-3,5.5);
  invert(&o->T[0][0],&o->Tinv[0][0]);
  insertObject(o,&object_list);
 
- o=newSphere(.05,.95,.35,.25,1,.25,.25,1,1,15);
+ /*o=newSphere(.05,.95,.35,.25,1,.25,.25,1,1,15);
  Scale(o,.75,.5,1.5);
  RotateY(o,PI/2);
  Translate(o,-1.45,1.1,3.5);
@@ -68,10 +67,25 @@ void buildScene(void)
  RotateZ(o,PI/1.5);
  Translate(o,1.75,1.25,5.0);
  invert(&o->T[0][0],&o->Tinv[0][0]);
+ insertObject(o,&object_list);*/
+
+ o=newSphere(.05,.95,.35,.75,1,1,.25,1,1,40);
+ Translate(o,0,2,5.5);
+ invert(&o->T[0][0],&o->Tinv[0][0]);
  insertObject(o,&object_list);
 
- o=newSphere(.05,.95,.35,.75,1,1,.25,1,1,1.5);
- Translate(o,0,2,5.5);
+ o=newPlane(0,0,0,0.95,0,0,0,1,1,40);
+ Scale(o,100,15,1);    // Do a few transforms...
+ RotateX(o,PI);
+ RotateY(o,0.02);
+ Translate(o,0,0,14);
+ invert(&o->T[0][0],&o->Tinv[0][0]);
+ insertObject(o,&object_list);
+
+ o=newPlane(0,0,0,0.95,0,0,0,1,1,40);
+ Scale(o,100,15,1);    // Do a few transforms...
+ RotateX(o,PI);
+ Translate(o,0,0,-4);
  invert(&o->T[0][0],&o->Tinv[0][0]);
  insertObject(o,&object_list);
 
@@ -83,7 +97,7 @@ void buildScene(void)
  l=newPLS(&p,.95,.95,.95);
  insertPLS(l,&light_list);*/
   
- addAreaLight(1.5,1.5,0,1,0,0,15.5,-5.5,9,9,1,1,1,&object_list,&light_list);
+ addAreaLight(1.5,1.5,0,1,0,0,15.5,5,9,9,1,1,1,&object_list,&light_list);
 
  // End of simple scene for Assignment 3
  // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
@@ -266,7 +280,7 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  struct point3D p;	// Intersection point
  struct point3D n;	// Normal at intersection
  struct colourRGB I;	// Colour returned by shading function
- int num_refls = 40;
+ int num_refls = 1;
 
  if (depth>MAX_DEPTH)	// Max recursion depth reached. Return invalid colour.
  {
@@ -495,6 +509,7 @@ int main(int argc, char *argv[])
                            // the direction or a ray
      struct ray3D *ray;		// Structure to keep the ray from e to a pixel
      struct colourRGB col;		// Return colour for raytraced pixels
+     double theta,phi;
      //struct object3D Os;
      ///////////////////////////////////////////////////////////////////
      // TO DO - complete the code that should be in this loop to do the
@@ -508,8 +523,8 @@ int main(int argc, char *argv[])
       jitter_x = 0;
       jitter_y = 0;
      }
-     d.px = 4.0f/3.0f*(-((double)sx)/2 + i + jitter_x + 0.5)/(double)sx;
-     d.py = 4.0f/3.0f*(-((double)sx)/2 + j + jitter_y + 0.5)/(double)sx;
+     d.px = (-((double)sx)/2 + i + jitter_x + 0.5)/(double)sx;
+     d.py = (-((double)sx)/2 + j + jitter_y + 0.5)/(double)sx;
      d.pz = -1;
      d.pw = 0;
      p0.px = 0;
