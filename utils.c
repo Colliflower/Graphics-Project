@@ -282,6 +282,8 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
  n->pw = 0;
  normalTransform(n,n,plane);
  normalize(n);
+ *a = (p->px+1)/2;
+ *b = (p->py+1)/2;
  p->px = ray->p0.px + *lambda*ray->d.px;
  p->py = ray->p0.py + *lambda*ray->d.py;
  p->pz = ray->p0.pz + *lambda*ray->d.pz;
@@ -310,6 +312,8 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
  n->py = (modelRay.p0.py + *lambda*modelRay.d.py);
  n->pz = (modelRay.p0.pz + *lambda*modelRay.d.pz);
  n->pw = 0;
+ *b = acos(n->py)/PI;
+ *a = atan2(n->px,n->pz)/(2*PI) + 0.5;
  normalTransform(n,n,sphere);
  normalize(n);
  p->px = ray->p0.px + *lambda*ray->d.px;
@@ -356,6 +360,14 @@ void cylinderIntersect(struct object3D *cylinder, struct ray3D *ray, double *lam
      k = fabs((z1-1)/(z1-z2));
     }
     *lambda = k*lambda_length+lambda1;
+    p->px = modelRay.p0.px + *lambda*modelRay.d.px;
+    p->py = modelRay.p0.py + *lambda*modelRay.d.py;
+    *a = atan2(p->px,p->py)/(2*PI) + 0.5;
+    if(z1 < z2)
+     *b = sqrt(pow(p->px,2)+pow(p->py,2))/4;
+    else {
+     *b = 1-sqrt(pow(p->px,2)+pow(p->py,2))/4;
+    }
    }
  }
  else{
@@ -364,6 +376,8 @@ void cylinderIntersect(struct object3D *cylinder, struct ray3D *ray, double *lam
   n->py = (modelRay.p0.py + *lambda*modelRay.d.py);
   n->pz = 0;
   n->pw = 0;
+  *b = z1/2+0.5;
+  *a = atan2(n->px,n->py)/(2*PI) + 0.5;
  }
  normalTransform(n,n,cylinder);
  normalize(n);
@@ -424,6 +438,9 @@ void coneIntersect(struct object3D *cone, struct ray3D *ray, double *lambda, str
  p2.pz = (modelRay.p0.pz + lambda2*modelRay.d.pz);
  p2.pw = 1;
  if (p->pz >= 0 && p->pz <= 1 && p2.pz > 0) {
+  //Intersects top portion of cone first and top portion second
+  *b = p->pz*2.0f/3.0f;
+  *a = atan2(p->px,p->py)/(2*PI) + 0.5;
   n->px = p->px;
   n->py = p->py;
   n->pz = -p->pz;
@@ -434,15 +451,16 @@ void coneIntersect(struct object3D *cone, struct ray3D *ray, double *lambda, str
   p->pw = 1;
  }
  else if (p->pz > 1 || (p->pz > 0 && p2.pz < 0)) {
+  //Intersects top portion first and bottom portion second
   *lambda = -(modelRay.p0.pz-1)/modelRay.d.pz;
   p->px = modelRay.p0.px + *lambda*modelRay.d.px;
   p->py = modelRay.p0.py + *lambda*modelRay.d.py;
-  p->pz = 1;
-  p->pw = 1;
   if (pow(p->px,2) + pow(p->py,2) > 1) {
    *lambda = -1;
    return;
   }
+  *b = 1-sqrt(pow(p->px,2)+pow(p->py,2))/3;
+  *a = atan2(p->px,p->py)/(2*PI) + 0.5;
   n->px = 0;
   n->py = 0;
   n->pz = 1;
@@ -452,21 +470,22 @@ void coneIntersect(struct object3D *cone, struct ray3D *ray, double *lambda, str
   p->pz = ray->p0.pz + *lambda*ray->d.pz;
   p->pw = 1;
  }
- else {
-  if (p2.pz >= 0 && p2.pz <= 1) {
-   n->px = p2.px;
-   n->py = p2.py;
-   n->pz = -p2.pz;
-   n->pw = 0;
-  }
-  else { 
-   *lambda = -1;
-   return;
-  }
+ else if (p2.pz >= 0 && p2.pz <= 1) {
+  //Intersects bottom portion first and top portion second
+  *b = p2.pz*2.0f/3.0f;
+  *a = atan2(p2.px,p2.py)/(2*PI) + 0.5;
+  n->px = p2.px;
+  n->py = p2.py;
+  n->pz = -p2.pz;
+  n->pw = 0;
   p->px = ray->p0.px + lambda2*ray->d.px;
   p->py = ray->p0.py + lambda2*ray->d.py;
   p->pz = ray->p0.pz + lambda2*ray->d.pz;
   p->pw = 1;
+ }
+ else { 
+  *lambda = -1;
+  return;
  }
  normalize(n);
  normalTransform(n,n,cone);
@@ -496,10 +515,25 @@ void texMap(struct image *img, double a, double b, double *R, double *G, double 
  // coordinates. Your code should use bi-linear
  // interpolation to obtain the texture colour.
  //////////////////////////////////////////////////
-
- *(R)=0;	// Returns black - delete this and
- *(G)=0;	// replace with your code to compute
- *(B)=0;	// texture colour at (a,b)
+ double x = a*(img->sx-1);
+ double y = b*(img->sy-1);
+ double fx = floor(x);
+ double fy = floor(y);
+ double cx = ceil(x);
+ double cy = ceil(y);
+ double tx = x-fx;
+ double ty = y-fy;
+ int iA,iB,iC,iD;
+ iA = (fy*img->sx+fx)*3;
+ iB = (fy*img->sx+cx)*3;
+ iC = (cy*img->sx+fx)*3;
+ iD = (cy*img->sx+cx)*3;
+ *R = ((double *)img->rgbdata)[iA]*(1-tx)*(1-ty)+((double *)img->rgbdata)[iD]*tx*ty
+      + ((double *)img->rgbdata)[iB]*tx*(1-ty) + ((double *)img->rgbdata)[iC]*(1-tx)*ty;
+ *G = ((double *)img->rgbdata)[iA+1]*(1-tx)*(1-ty)+((double *)img->rgbdata)[iD+1]*tx*ty
+      + ((double *)img->rgbdata)[iB+1]*tx*(1-ty) + ((double *)img->rgbdata)[iC+1]*(1-tx)*ty;
+ *B = ((double *)img->rgbdata)[iA+2]*(1-tx)*(1-ty)+((double *)img->rgbdata)[iD+2]*tx*ty
+      + ((double *)img->rgbdata)[iB+2]*tx*(1-ty) + ((double *)img->rgbdata)[iC+2]*(1-tx)*ty; 
  return;
 }
 
