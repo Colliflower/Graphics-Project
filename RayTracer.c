@@ -53,10 +53,10 @@ void buildScene(void)
  RotateY(o,PI/8);
  Translate(o,0,-3,5.5);
  invert(&o->T[0][0],&o->Tinv[0][0]);
- //loadTexture(o, "spim");
+ loadTexture(o, "spim");
  insertObject(o,&object_list);
 
- o=newSphere(.05,.95,0,0,1,.25,.25,1,1,15);
+ /*o=newSphere(.05,.95,0,0,1,.25,.25,1,1,15);
  Scale(o,.75,.5,1.5);
  RotateY(o,PI/2);
  Translate(o,-1.45,1.1,3.5);
@@ -68,18 +68,18 @@ void buildScene(void)
  RotateZ(o,PI/1.5);
  Translate(o,1.75,1.25,5.0);
  invert(&o->T[0][0],&o->Tinv[0][0]);
- insertObject(o,&object_list);
+ insertObject(o,&object_list);*/
 
-/* o=newSphere(.4,.95,.35,0.01,1,1,.25,1,1,40);
+ o=newSphere(.2,.95,.35,0.9,1,1,.25,1,1,40);
  Scale(o,2,2,2);
- RotateX(o,0.1);
  RotateY(o,PI);
- Translate(o,0,2,5.5);
+ RotateX(o,0.5*PI);
+ Translate(o,0,-2.2,-2.2);
  invert(&o->T[0][0],&o->Tinv[0][0]);
- loadTexture(o, "da_urf.ppm");
+ loadTexture(o, "spim");
  insertObject(o,&object_list);
 
- o=newPlane(0.2,0.1,0,0.95,0.1,0.1,0.2,1,1,40);
+/* o=newPlane(0.2,0.1,0,0.95,0.1,0.1,0.2,1,1,40);
  Scale(o,100,15,1);    // Do a few transforms...
  RotateX(o,PI);
  RotateY(o,0.02);
@@ -95,15 +95,15 @@ void buildScene(void)
  insertObject(o,&object_list);*/
 
  // Insert a single point light source.
- p.px=0;
+ /*p.px=0;
  p.py=15.5;
  p.pz=-5.5;
  p.pw=1;
  l=newPLS(&p,.95,.95,.95);
- insertPLS(l,&light_list);
+ insertPLS(l,&light_list);*/
   
- //addAreaLight(1.5,1.5,0,1,0,0,15.5,5,9,9,1,1,1,&object_list,&light_list);
-
+ addAreaLight(1.5,1.5,0,1,0,0,15.5,5,9,9,1,1,1,&object_list,&light_list);
+ addAreaLight(1.5,1.5,0,1,0,5,15.5,5,9,9,1,1,1,&object_list,&light_list);
  // End of simple scene for Assignment 3
  // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
  // or, you can create code to handle arbitrary triangles and then define objects as surface meshes.
@@ -506,7 +506,7 @@ int main(int argc, char *argv[])
 
  
  fprintf(stderr,"Rendering row: ");
- double aa_res = atoi(argv[3]);
+ double aa_res = atof(argv[3]);
  if (!antialiasing)
   aa_res = 1;
  #pragma omp parallel for
