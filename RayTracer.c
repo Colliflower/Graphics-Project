@@ -45,62 +45,50 @@ void buildScene(void)
 
  struct object3D *o;
  struct pointLS *l;
- struct point3D p; 
-
- o=newPlane(.05,.75,0,0,.55,.8,.75,1,1,0);
- Scale(o,6,6,1);    // Do a few transforms...
+ struct point3D p;
+    
+ o=newSphere(.4,1,0,0.01,1,1,.25,1,1,40);
+ Scale(o,100,100,100);
  RotateX(o,PI/2);
- RotateY(o,PI/8);
- Translate(o,0,-3,5.5);
+ //RotateY(o,PI);
+ Translate(o,0,-200,100);
  invert(&o->T[0][0],&o->Tinv[0][0]);
- loadTexture(o, "spim");
+ loadTexture(o,"Textures/earth.ppm");
  insertObject(o,&object_list);
-
- /*o=newSphere(.05,.95,0,0,1,.25,.25,1,1,15);
- Scale(o,.75,.5,1.5);
- RotateY(o,PI/2);
- Translate(o,-1.45,1.1,3.5);
- invert(&o->T[0][0],&o->Tinv[0][0]);
- insertObject(o,&object_list);
-
- o=newSphere(.05,.95,0,0,.75,.95,.55,1,1,30);
- Scale(o,.5,2.0,1.0);
- RotateZ(o,PI/1.5);
- Translate(o,1.75,1.25,5.0);
- invert(&o->T[0][0],&o->Tinv[0][0]);
- insertObject(o,&object_list);*/
-
- o=newSphere(.2,.95,.35,0.9,1,1,.25,1,1,40);
- Scale(o,2,2,2);
+    
+ o=newSphere(.4,1,0,0.01,1,1,.25,1,1,40);
+ Scale(o,4,4,4);
+ RotateX(o,0.1);
  RotateY(o,PI);
- RotateX(o,0.5*PI);
- Translate(o,0,-2.2,-2.2);
+ Translate(o,10,2,20);
  invert(&o->T[0][0],&o->Tinv[0][0]);
- loadTexture(o, "spim");
+ loadTexture(o,"Textures/moon.ppm");
  insertObject(o,&object_list);
-
-/* o=newPlane(0.2,0.1,0,0.95,0.1,0.1,0.2,1,1,40);
- Scale(o,100,15,1);    // Do a few transforms...
- RotateX(o,PI);
- RotateY(o,0.02);
- Translate(o,0,0,14);
- invert(&o->T[0][0],&o->Tinv[0][0]);
- insertObject(o,&object_list);
-
- o=newPlane(0.2,0.1,0,0.95,0.2,0.1,0.1,1,1,40);
- Scale(o,100,15,1);    // Do a few transforms...
- RotateX(o,PI);
- Translate(o,0,0,-4);
- invert(&o->T[0][0],&o->Tinv[0][0]);
- insertObject(o,&object_list);*/
+    
+    o=newCylinder(.05,1,0,1,.25,.25,.25,1,1,50);
+    Scale(o,1/sqrt(2.0),1/sqrt(2.0),3);
+    //RotateY(o,PI);
+    RotateX(o,PI/3.0);
+    Translate(o,10,0,0);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+    
+    o=newCone(.05,1,0,1,1,.25,.25,1,1,50);
+    Scale(o,1,1,1.5);
+    //RotateY(o,PI);
+    Translate(o,0,0,-3/2.0);
+    RotateX(o,PI/3.0);
+    Translate(o,10,0,0);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
 
  // Insert a single point light source.
- /*p.px=0;
- p.py=15.5;
- p.pz=-5.5;
+ p.px=0;
+ p.py=100;
+ p.pz=10.0;
  p.pw=1;
  l=newPLS(&p,.95,.95,.95);
- insertPLS(l,&light_list);*/
+ insertPLS(l,&light_list);
   
  addAreaLight(1.5,1.5,0,1,0,0,15.5,5,9,9,1,1,1,&object_list,&light_list);
  addAreaLight(1.5,1.5,0,1,0,5,15.5,5,9,9,1,1,1,&object_list,&light_list);
@@ -445,7 +433,7 @@ int main(int argc, char *argv[])
  // Camera center is at (0,0,-1)
  e.px=0;
  e.py=0;
- e.pz=-3;
+ e.pz=0;
  e.pw=1;
 
  // To define the gaze vector, we choose a point 'pc' in the scene that
@@ -509,7 +497,7 @@ int main(int argc, char *argv[])
  double aa_res = atof(argv[3]);
  if (!antialiasing)
   aa_res = 1;
- #pragma omp parallel for
+ //#pragma omp parallel for
  for (int j=0;j<sy;j++)		// For each of the pixels in the image
  {
   fprintf(stderr,"%d/%d, ",1+j,sy);
