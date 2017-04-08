@@ -24,6 +24,7 @@
 // maximum recursion depth
 struct object3D *object_list;
 struct pointLS *light_list;
+struct image *env_img;
 int MAX_DEPTH;
 
 void buildScene(void)
@@ -46,8 +47,31 @@ void buildScene(void)
  struct object3D *o;
  struct pointLS *l;
  struct point3D p;
+
+ env_img = readPPMimage("Env_Map/boringbuilding.ppm");
     
- o=newSphere(.4,1,0,0.01,1,1,.25,1,1,40);
+    o=newSphere(.2,1,0,0.2,1,1,.9,0.2,0.3,40);
+    //RotateY(o,PI);
+    Scale(o,3,3,3);
+    Translate(o,0,-5,20);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+/*
+    o=newPlane(.2,1,0,1,1,1,.9,1,1,15);
+    RotateX(o,PI/2);
+    Scale(o,20,20,20);
+    Translate(o,0,-8,20);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);*/
+    
+ addAreaLight(1,15,.01,-1,0,0,16,12,9,9,.99,.99,1,&object_list,&light_list,0);
+ addAreaLight(1,15,.01,-1,0,0,16,21.5,9,9,.99,.99,1,&object_list,&light_list,0);
+ //addAreaLight(1,15,.01,-1,0,0,16,0,9,9,.99,.99,1,&object_list,&light_list,0);
+    
+ /* SPACE SCENE
+ env_img = readPPMimage("Env_Map/milky.ppm");
+    
+ o=newSphere(.05,1,0,0.01,1,1,.25,1,1,40);
  Scale(o,100,100,100);
  RotateX(o,PI/2);
  //RotateY(o,PI);
@@ -56,7 +80,7 @@ void buildScene(void)
  loadTexture(o,"Textures/earth.ppm");
  insertObject(o,&object_list);
     
- o=newSphere(.4,1,0,0.01,1,1,.25,1,1,40);
+ o=newSphere(.05,1,0,0.01,1,1,.25,1,1,40);
  Scale(o,4,4,4);
  RotateX(o,0.1);
  RotateY(o,PI);
@@ -65,24 +89,24 @@ void buildScene(void)
  loadTexture(o,"Textures/moon.ppm");
  insertObject(o,&object_list);
     
-    o=newCylinder(.05,1,0,1,.25,.25,.25,1,1,50);
-    Scale(o,1/sqrt(2.0),1/sqrt(2.0),3);
-    //RotateY(o,PI);
-    RotateX(o,PI/3.0);
-    Translate(o,10,0,0);
-    invert(&o->T[0][0],&o->Tinv[0][0]);
-    insertObject(o,&object_list);
+ o=newCylinder(.05,1,0,1,.5,.5,.5,1,1,50);
+ Scale(o,1/sqrt(2.0),1/sqrt(2.0),3);
+ //RotateY(o,PI);
+ RotateX(o,PI/3.0);
+ Translate(o,10,0,0);
+ invert(&o->T[0][0],&o->Tinv[0][0]);
+ insertObject(o,&object_list);
     
-    o=newCone(.05,1,0,1,1,.25,.25,1,1,50);
-    Scale(o,1,1,1.5);
-    //RotateY(o,PI);
-    Translate(o,0,0,-3/2.0);
-    RotateX(o,PI/3.0);
-    Translate(o,10,0,0);
-    invert(&o->T[0][0],&o->Tinv[0][0]);
-    insertObject(o,&object_list);
+ o=newCone(.05,1,0,1,.5,.5,.5,1,1,50);
+ Scale(o,1,1,1.5);
+ //RotateY(o,PI);
+ Translate(o,0,0,-3/2.0);
+ RotateX(o,PI/3.0);
+ Translate(o,10,0,0);
+ invert(&o->T[0][0],&o->Tinv[0][0]);
+ insertObject(o,&object_list);
 
- // Insert a single point light source.
+ //Insert a single point light source.
  p.px=0;
  p.py=100;
  p.pz=10.0;
@@ -90,8 +114,8 @@ void buildScene(void)
  l=newPLS(&p,.95,.95,.95);
  insertPLS(l,&light_list);
   
- addAreaLight(1.5,1.5,0,1,0,0,15.5,5,9,9,1,1,1,&object_list,&light_list);
- addAreaLight(1.5,1.5,0,1,0,5,15.5,5,9,9,1,1,1,&object_list,&light_list);
+ addAreaLight(20,20,0,1,0,0,100,10,9,9,1,1,0.95,&object_list,&light_list);*/
+
  // End of simple scene for Assignment 3
  // Keep in mind that you can define new types of objects such as cylinders and parametric surfaces,
  // or, you can create code to handle arbitrary triangles and then define objects as surface meshes.
@@ -161,7 +185,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
    struct object3D *o;
    struct point3D inter_p;
    struct point3D inter_n;
-   findFirstHit(shadow_ray,&lambda,obj,&o,&inter_p,&inter_n,&da,&db,1);
+   findFirstHit(shadow_ray,&lambda,obj,&o,&inter_p,&inter_n,&da,&db,1,0);
    if(lambda > 0 && lambda < 1) {
     tmp_col.R += currLight->col.R*R*obj->alb.ra;
     tmp_col.G += currLight->col.G*G*obj->alb.ra;
@@ -213,7 +237,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
 
 }
 
-void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b, char shadowFlag)
+void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b, char shadowFlag, char insideFlag)
 {
  // Find the closest intersection between the ray and any objects in the scene.
  // It returns:
@@ -239,7 +263,7 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
  double currA,currB;
  while (currObj) {
   currObj->intersect(currObj, ray, &nextLambda,  &intersect, &normal, &currA, &currB);
-  if (nextLambda > 0 && nextLambda < currLambda && currObj != Os && (!currObj->isLightSource || !shadowFlag)) {
+  if (nextLambda > 0.00001 && nextLambda < currLambda && (currObj != Os || insideFlag) && (!currObj->isLightSource || !shadowFlag)) {
    currLambda = nextLambda;
    *obj = currObj;
    *p = intersect;
@@ -256,7 +280,7 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
   *lambda = currLambda;
 }
 
-void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os)
+void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os, double incoming_r_index, char insideFlag)
 {
  // Ray-Tracing function. It finds the closest intersection between
  // the ray and any scene objects, calls the shading function to
@@ -276,7 +300,7 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  struct point3D p;	// Intersection point
  struct point3D n;	// Normal at intersection
  struct colourRGB I;	// Colour returned by shading function
- int num_refls = 1;
+ int num_refls = 10;
 
  if (depth>MAX_DEPTH)	// Max recursion depth reached. Return invalid colour.
  {
@@ -289,15 +313,16 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  ///////////////////////////////////////////////////////
  // TO DO: Complete this function. Refer to the notes
  // if you are unsure what to do here.
- ///////////////////////////////////////////////////////a
- findFirstHit(ray, &lambda, Os, &obj, &p, &n, &a, &b, 0);
+ ///////////////////////////////////////////////////////
+ 
+ findFirstHit(ray, &lambda, Os, &obj, &p, &n, &a, &b, 0, insideFlag);
  if (lambda > 0) {
   rtShade(obj, &p, &n, ray, depth, a, b, col);
-  struct colourRGB reflcol;
+  struct colourRGB refcol;
   struct colourRGB collector;
   memset(&collector, 0, sizeof(struct colourRGB));
   struct point3D r,*u,*v;
-  struct ray3D *reflray;
+  struct ray3D *refray;
   double d  = dot(&ray->d, &n);
   if (obj->alb.rg != 0) {
    for (int i = 0; i < num_refls; i++) {
@@ -321,19 +346,43 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
     free(u);
     free(v);
     normalize(&r);
-    reflray = newRay(&p, &r);
-    rayTrace(reflray, depth+1, &reflcol, obj);
-    free(reflray);
-    if (reflcol.R != -1) {
-     collector.R += reflcol.R;
-     collector.G += reflcol.G;
-     collector.B += reflcol.B;
+    refray = newRay(&p, &r);
+    rayTrace(refray, depth+1, &refcol, obj, incoming_r_index, insideFlag);
+    if (refcol.R != -1) {
+     collector.R += refcol.R;
+     collector.G += refcol.G;
+     collector.B += refcol.B;
     }
    }
-   col->R += obj->alb.rg*collector.R/(double)num_refls;
-   col->G += obj->alb.rg*collector.G/(double)num_refls;
-   col->B += obj->alb.rg*collector.B/(double)num_refls;
   }
+  if (obj->alpha <1 && obj->r_index != 0) {
+   double n_before = incoming_r_index;
+   double n_after = obj->r_index;
+   char still_inside = 1;
+   double dot_prod  = dot(&ray->d, &n);
+   if(fabs(acos(dot_prod))<=PI/2.0){
+       still_inside = 0;
+       n_after = 1;
+   }
+   double A = n_before/n_after;
+   double B = A*dot_prod + sqrt(1 - pow(A,2)*(1-pow(dot_prod,2)));
+   r.px = A*ray->d.px - B*n.px;
+   r.py = A*ray->d.py - B*n.py;
+   r.pz = A*ray->d.pz - B*n.pz;
+   r.pw = 0;
+   normalize(&r);
+   refray = newRay(&p, &r);
+   rayTrace(refray, depth+1, &refcol, obj, incoming_r_index, still_inside);
+   if (refcol.R != -1) {
+    collector.R += refcol.R;
+    collector.G += refcol.G;
+    collector.B += refcol.B;
+   }
+  }
+  free(refray);
+  col->R += obj->alb.rg*collector.R/(double)num_refls;
+  col->G += obj->alb.rg*collector.G/(double)num_refls;
+  col->B += obj->alb.rg*collector.B/(double)num_refls;
   if (col->R > 1)
    col->R = 1;
   if (col->G > 1)
@@ -342,9 +391,15 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
    col->B = 1;
  }
  else {
-  col->R = -1;
-  col->G = -1;
-  col->B = -1;
+  if(env_img!=NULL){
+   b = acos(ray->d.py)/PI;
+   a = atan2(ray->d.px,ray->d.pz)/(2*PI) + 0.5;
+   texMap(env_img,a,b,&col->R,&col->G,&col->B);
+  } else {
+   col->R=-1;
+   col->G=-1;
+   col->B=-1;
+  }
  }
 }
 
@@ -536,8 +591,8 @@ int main(int argc, char *argv[])
       d.pz = sin(theta)*cos(phi);
      }
      else {
-      d.px = 4.0f/3.0f*(-((double)sx)/2 + i + jitter_x + 0.5)/(double)sx;
-      d.py = 4.0f/3.0f*(-((double)sy)/2 + j + jitter_y + 0.5)/(double)sy;
+      d.px = 3.0f*(-((double)sx)/2 + i + jitter_x + 0.5)/(double)sx;
+      d.py = 3.0f*(-((double)sy)/2 + j + jitter_y + 0.5)/(double)sy;
       d.pz = -1;
      }
      d.pw = 0;
@@ -550,7 +605,7 @@ int main(int argc, char *argv[])
      //printf("%f, %f, %f\n",d.px,d.py,d.pz);
      normalize(&d);
      ray = newRay(&p0,&d);
-     rayTrace(ray, 0, &col, NULL);
+     rayTrace(ray, 0, &col, NULL, 1, 0);
      /*col.R = (char)ceil(cos(20*PI*(i+1)/(double)sx+PI/2)) ^ (char)ceil(cos(20*PI*(j+1)/(double)sx+PI/2));
      col.G = col.R;
      col.B = col.R;*/
