@@ -380,6 +380,8 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
   return;
  }
  *lambda = (-B - sqrt(B*B - 4*A*C))/(2*A);
+ if(*lambda <= 0)
+  *lambda = (-B + sqrt(B*B - 4*A*C))/(2*A);
  n->px = (modelRay.p0.px + *lambda*modelRay.d.px);
  n->py = (modelRay.p0.py + *lambda*modelRay.d.py);
  n->pz = (modelRay.p0.pz + *lambda*modelRay.d.pz);

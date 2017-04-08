@@ -48,11 +48,11 @@ void buildScene(void)
  struct pointLS *l;
  struct point3D p;
 
- env_img = readPPMimage("Env_Map/boringbuilding.ppm");
+ env_img = readPPMimage("wood_tex.ppm");
     
-    o=newSphere(.2,1,0,0.2,1,1,.9,0.2,0.3,40);
+    o=newSphere(.2,1,0,0.2,.9,.7,.2,.2,0.9,40);
     //RotateY(o,PI);
-    Scale(o,3,3,3);
+    Scale(o,10,10,10);
     Translate(o,0,-5,20);
     invert(&o->T[0][0],&o->Tinv[0][0]);
     insertObject(o,&object_list);
@@ -185,7 +185,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
    struct object3D *o;
    struct point3D inter_p;
    struct point3D inter_n;
-   findFirstHit(shadow_ray,&lambda,obj,&o,&inter_p,&inter_n,&da,&db,1,0);
+   findFirstHit(shadow_ray,&lambda,obj,&o,&inter_p,&inter_n,&da,&db,1);
    if(lambda > 0 && lambda < 1) {
     tmp_col.R += currLight->col.R*R*obj->alb.ra;
     tmp_col.G += currLight->col.G*G*obj->alb.ra;
@@ -237,7 +237,7 @@ void rtShade(struct object3D *obj, struct point3D *p, struct point3D *n, struct 
 
 }
 
-void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b, char shadowFlag, char insideFlag)
+void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct object3D **obj, struct point3D *p, struct point3D *n, double *a, double *b, char shadowFlag)
 {
  // Find the closest intersection between the ray and any objects in the scene.
  // It returns:
@@ -263,7 +263,7 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
  double currA,currB;
  while (currObj) {
   currObj->intersect(currObj, ray, &nextLambda,  &intersect, &normal, &currA, &currB);
-  if (nextLambda > 0.00001 && nextLambda < currLambda && (currObj != Os || insideFlag) && (!currObj->isLightSource || !shadowFlag)) {
+  if (nextLambda > 0.1 && nextLambda < currLambda && (!currObj->isLightSource || !shadowFlag)) {
    currLambda = nextLambda;
    *obj = currObj;
    *p = intersect;
@@ -280,7 +280,7 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
   *lambda = currLambda;
 }
 
-void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os, double incoming_r_index, char insideFlag)
+void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object3D *Os)
 {
  // Ray-Tracing function. It finds the closest intersection between
  // the ray and any scene objects, calls the shading function to
@@ -315,15 +315,46 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  // if you are unsure what to do here.
  ///////////////////////////////////////////////////////
  
- findFirstHit(ray, &lambda, Os, &obj, &p, &n, &a, &b, 0, insideFlag);
+ findFirstHit(ray, &lambda, Os, &obj, &p, &n, &a, &b, 0);
  if (lambda > 0) {
   rtShade(obj, &p, &n, ray, depth, a, b, col);
   struct colourRGB refcol;
   struct colourRGB collector;
   memset(&collector, 0, sizeof(struct colourRGB));
   struct point3D r,*u,*v;
-  struct ray3D *refray;
+  struct ray3D *reflray;
+  struct ray3D *refrray;
   double d  = dot(&ray->d, &n);
+  if (obj->alpha <1 && obj->r_index != 0) {
+   int inside = 1;
+   double n_before = 1;
+   double n_after = obj->r_index;
+   double dot_prod  = dot(&ray->d, &n);
+   if(dot_prod>0){
+       inside = 0;
+       n_after = 1;
+       n_before = obj->r_index;
+       n.px = -n.px;
+       n.py = -n.py;
+       n.pz = -n.pz;
+       dot_prod  = dot(&ray->d, &n);
+   }
+   double A = n_before/n_after;
+   double B = A*dot_prod + sqrt(1 - A*A*(1-dot_prod*dot_prod));
+   r.px = A*ray->d.px - B*n.px;
+   r.py = A*ray->d.py - B*n.py;
+   r.pz = A*ray->d.pz - B*n.pz;
+   r.pw = 0;
+   normalize(&r);
+   refrray = newRay(&p, &r);
+   rayTrace(refrray, depth+(1-inside), &refcol, obj);
+   if (refcol.R != -1) {
+    col->R = (1-obj->alpha)*refcol.R + obj->alpha*col->R;
+    col->G = (1-obj->alpha)*refcol.G + obj->alpha*col->G;
+    col->B = (1-obj->alpha)*refcol.B + obj->alpha*col->B;
+   }
+   free(refrray);
+  }
   if (obj->alb.rg != 0) {
    for (int i = 0; i < num_refls; i++) {
     r.px = ray->d.px - 2*d*n.px;
@@ -346,40 +377,16 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
     free(u);
     free(v);
     normalize(&r);
-    refray = newRay(&p, &r);
-    rayTrace(refray, depth+1, &refcol, obj, incoming_r_index, insideFlag);
+    reflray = newRay(&p, &r);
+    rayTrace(reflray, depth+1, &refcol, obj);
     if (refcol.R != -1) {
      collector.R += refcol.R;
      collector.G += refcol.G;
      collector.B += refcol.B;
     }
+    free(reflray);
    }
   }
-  if (obj->alpha <1 && obj->r_index != 0) {
-   double n_before = incoming_r_index;
-   double n_after = obj->r_index;
-   char still_inside = 1;
-   double dot_prod  = dot(&ray->d, &n);
-   if(fabs(acos(dot_prod))<=PI/2.0){
-       still_inside = 0;
-       n_after = 1;
-   }
-   double A = n_before/n_after;
-   double B = A*dot_prod + sqrt(1 - pow(A,2)*(1-pow(dot_prod,2)));
-   r.px = A*ray->d.px - B*n.px;
-   r.py = A*ray->d.py - B*n.py;
-   r.pz = A*ray->d.pz - B*n.pz;
-   r.pw = 0;
-   normalize(&r);
-   refray = newRay(&p, &r);
-   rayTrace(refray, depth+1, &refcol, obj, incoming_r_index, still_inside);
-   if (refcol.R != -1) {
-    collector.R += refcol.R;
-    collector.G += refcol.G;
-    collector.B += refcol.B;
-   }
-  }
-  free(refray);
   col->R += obj->alb.rg*collector.R/(double)num_refls;
   col->G += obj->alb.rg*collector.G/(double)num_refls;
   col->B += obj->alb.rg*collector.B/(double)num_refls;
@@ -392,9 +399,13 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  }
  else {
   if(env_img!=NULL){
+   double R,G,B;
    b = acos(ray->d.py)/PI;
    a = atan2(ray->d.px,ray->d.pz)/(2*PI) + 0.5;
-   texMap(env_img,a,b,&col->R,&col->G,&col->B);
+   texMap(env_img,a,b,&R,&G,&B);
+   col->R=R;
+   col->G=G;
+   col->B=B;
   } else {
    col->R=-1;
    col->G=-1;
@@ -552,7 +563,7 @@ int main(int argc, char *argv[])
  double aa_res = atof(argv[3]);
  if (!antialiasing)
   aa_res = 1;
- //#pragma omp parallel for
+ //#pragma omp parallel for collapse(2)
  for (int j=0;j<sy;j++)		// For each of the pixels in the image
  {
   fprintf(stderr,"%d/%d, ",1+j,sy);
@@ -605,7 +616,7 @@ int main(int argc, char *argv[])
      //printf("%f, %f, %f\n",d.px,d.py,d.pz);
      normalize(&d);
      ray = newRay(&p0,&d);
-     rayTrace(ray, 0, &col, NULL, 1, 0);
+     rayTrace(ray, 0, &col, NULL);
      /*col.R = (char)ceil(cos(20*PI*(i+1)/(double)sx+PI/2)) ^ (char)ceil(cos(20*PI*(j+1)/(double)sx+PI/2));
      col.G = col.R;
      col.B = col.R;*/
