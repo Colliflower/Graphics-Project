@@ -730,16 +730,34 @@ void addAreaLight(float sx, float sy, float nx, float ny, float nz,\
   struct pointLS *l;
   struct point3D p;
 
-  int i, j;
-  for(i=0; i<lx; i++){
-   for(j=0; j<ly; j++){
-    p.px = i/(double)lx -0.5;
-    p.py = j/(double)ly -0.5;
+  if(circle_flag){
+   int i;
+   double theta;
+   double r;
+   for(i=0; i<(lx*ly); i++){
+    theta = drand48()*2*PI;
+    r = sqrt(drand48());
+    p.px = r*cos(theta);
+    p.py = r*sin(theta);
     p.pz = 0;
     p.pw = 1;
     matVecMult(o->T,&p);
     l = newPLS(&p, r, g, b);
     insertPLS(l,l_list);
+   }
+  }
+  else{
+   int i, j;
+   for(i=0; i<lx; i++){
+    for(j=0; j<ly; j++){
+     p.px = 2*(i/(double)lx -0.5);
+     p.py = 2*(j/(double)ly -0.5);
+     p.pz = 0;
+     p.pw = 1;
+     matVecMult(o->T,&p);
+     l = newPLS(&p, r, g, b);
+     insertPLS(l,l_list);
+    }
    }
   }
 }
