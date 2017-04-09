@@ -379,9 +379,16 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
   *lambda = -1;
   return;
  }
- *lambda = (-B - sqrt(B*B - 4*A*C))/(2*A);
- if(*lambda <= 0)
-  *lambda = (-B + sqrt(B*B - 4*A*C))/(2*A);
+ double intersect1 = (-B - sqrt(B*B - 4*A*C))/(2*A);
+ double intersect2 = (-B - sqrt(B*B - 4*A*C))/(2*A);
+ if(intersect1 < 0)
+  *lambda = intersect2;
+ else if (intersect2 < 0)
+  *lambda = intersect1;
+ else if(intersect1 < intersect2)
+  *lambda = intersect1;
+ else
+  *lambda = intersect2;
  n->px = (modelRay.p0.px + *lambda*modelRay.d.px);
  n->py = (modelRay.p0.py + *lambda*modelRay.d.py);
  n->pz = (modelRay.p0.pz + *lambda*modelRay.d.pz);

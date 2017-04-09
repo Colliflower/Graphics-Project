@@ -48,24 +48,31 @@ void buildScene(void)
  struct pointLS *l;
  struct point3D p;
 
- env_img = readPPMimage("wood_tex.ppm");
+ env_img = readPPMimage("Env_Map/building.ppm");
     
-    o=newSphere(.2,1,0,0.2,.9,.7,.2,.2,0.9,40);
+    o=newSphere(.2,1,0,0.4,1,1,1,.1,1.23,17);
     //RotateY(o,PI);
-    Scale(o,10,10,10);
-    Translate(o,0,-5,20);
+    Scale(o,6,6,6);
+    Translate(o,0,-2,15);
     invert(&o->T[0][0],&o->Tinv[0][0]);
     insertObject(o,&object_list);
-/*
-    o=newPlane(.2,1,0,1,1,1,.9,1,1,15);
+    
+    o=newSphere(.2,1,0,0.4,1,1,1,.1,1.23,17);
+    //RotateY(o,PI);
+    Scale(o,3,3,3);
+    Translate(o,0,-2,11);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+    
+    o=newPlane(.2,1,0,1,1,1,.9,1,1,17);
     RotateX(o,PI/2);
     Scale(o,20,20,20);
-    Translate(o,0,-8,20);
+    Translate(o,-.1,-4.2,20);
     invert(&o->T[0][0],&o->Tinv[0][0]);
-    insertObject(o,&object_list);*/
+    insertObject(o,&object_list);
     
- addAreaLight(1,15,.01,-1,0,0,16,12,9,9,.99,.99,1,&object_list,&light_list,0);
- addAreaLight(1,15,.01,-1,0,0,16,21.5,9,9,.99,.99,1,&object_list,&light_list,0);
+ addAreaLight(1,15,.01,-1,0,0,16,12,4,25,.99,.99,1,&object_list,&light_list,0);
+ addAreaLight(1,15,.01,-1,0,0,16,21.5,4,25,.99,.99,1,&object_list,&light_list,0);
  //addAreaLight(1,15,.01,-1,0,0,16,0,9,9,.99,.99,1,&object_list,&light_list,0);
     
  /* SPACE SCENE
@@ -263,7 +270,7 @@ void findFirstHit(struct ray3D *ray, double *lambda, struct object3D *Os, struct
  double currA,currB;
  while (currObj) {
   currObj->intersect(currObj, ray, &nextLambda,  &intersect, &normal, &currA, &currB);
-  if (nextLambda > 0.1 && nextLambda < currLambda && (!currObj->isLightSource || !shadowFlag)) {
+  if (nextLambda > 0 && currObj != Os && nextLambda < currLambda && (!currObj->isLightSource || !shadowFlag)) {
    currLambda = nextLambda;
    *obj = currObj;
    *p = intersect;
@@ -300,7 +307,7 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
  struct point3D p;	// Intersection point
  struct point3D n;	// Normal at intersection
  struct colourRGB I;	// Colour returned by shading function
- int num_refls = 10;
+ int num_refls = 1;
 
  if (depth>MAX_DEPTH)	// Max recursion depth reached. Return invalid colour.
  {
@@ -326,34 +333,32 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
   struct ray3D *refrray;
   double d  = dot(&ray->d, &n);
   if (obj->alpha <1 && obj->r_index != 0) {
-   int inside = 1;
-   double n_before = 1;
-   double n_after = obj->r_index;
+   double A = 1/obj->r_index;
    double dot_prod  = dot(&ray->d, &n);
-   if(dot_prod>0){
-       inside = 0;
-       n_after = 1;
-       n_before = obj->r_index;
-       n.px = -n.px;
-       n.py = -n.py;
-       n.pz = -n.pz;
-       dot_prod  = dot(&ray->d, &n);
+   if(dot_prod>0){ //We're inside the object, swap the normal for both reflection and refraction
+    A = 1/A;
+    n.px = -n.px;
+    n.py = -n.py;
+    n.pz = -n.pz;
+    dot_prod  = dot(&ray->d, &n);
    }
-   double A = n_before/n_after;
-   double B = A*dot_prod + sqrt(1 - A*A*(1-dot_prod*dot_prod));
-   r.px = A*ray->d.px - B*n.px;
-   r.py = A*ray->d.py - B*n.py;
-   r.pz = A*ray->d.pz - B*n.pz;
-   r.pw = 0;
-   normalize(&r);
-   refrray = newRay(&p, &r);
-   rayTrace(refrray, depth+(1-inside), &refcol, obj);
-   if (refcol.R != -1) {
-    col->R = (1-obj->alpha)*refcol.R + obj->alpha*col->R;
-    col->G = (1-obj->alpha)*refcol.G + obj->alpha*col->G;
-    col->B = (1-obj->alpha)*refcol.B + obj->alpha*col->B;
+   double radicand = 1 - A*A*(1-dot_prod*dot_prod);
+   if(radicand >= 0){
+    double B = A*dot_prod + sqrt(radicand);
+    r.px = A*ray->d.px - B*n.px;
+    r.py = A*ray->d.py - B*n.py;
+    r.pz = A*ray->d.pz - B*n.pz;
+    r.pw = 0;
+    normalize(&r);
+    refrray = newRay(&p, &r);
+    rayTrace(refrray, depth+1, &refcol, obj);
+    if (refcol.R != -1) {
+     col->R = (1-obj->alpha)*refcol.R + obj->alpha*col->R;
+     col->G = (1-obj->alpha)*refcol.G + obj->alpha*col->G;
+     col->B = (1-obj->alpha)*refcol.B + obj->alpha*col->B;
+    }
+    free(refrray);
    }
-   free(refrray);
   }
   if (obj->alb.rg != 0) {
    for (int i = 0; i < num_refls; i++) {
@@ -428,10 +433,14 @@ int main(int argc, char *argv[])
  struct point3D g;
  struct point3D up;
  double du, dv;			// Increase along u and v directions for pixel coordinates
-  struct colourRGB background;   // Background colour
+ struct colourRGB background;   // Background colour
  int i,j,k,l;			// Counters for pixel coordinates
  unsigned char *rgbIm;
  char VR_flag = 0;
+ char DOF = 0;
+ double F = 35; //Focal Length
+ double R = .1; //Apature Radius
+ struct point3D C; //Focal Point
 
  if (argc<5)
  {
@@ -600,17 +609,42 @@ int main(int argc, char *argv[])
       d.px = cos(theta)*cos(phi);
       d.py = sin(phi);
       d.pz = sin(theta)*cos(phi);
+      d.pw = 0;
+      p0.px = 0;
+      p0.py = 0;
+      p0.pz = 0;
+      p0.pw = 1;
      }
      else {
-      d.px = 3.0f*(-((double)sx)/2 + i + jitter_x + 0.5)/(double)sx;
-      d.py = 3.0f*(-((double)sy)/2 + j + jitter_y + 0.5)/(double)sy;
-      d.pz = -1;
+      if(DOF){
+       double rx = (drand48()*2 - 1)*R;
+       double ry = (drand48()*2 - 1)*R;
+       d.px = 3.0f*(-((double)sx)/2 + i + 0.5)/(double)sx;
+       d.py = 3.0f*(-((double)sy)/2 + j + 0.5)/(double)sy;
+       d.pz = -1;
+       normalize(&d);
+       C.px = F*d.px;
+       C.py = F*d.py;
+       C.pz = F*d.pz;
+       p0.px = rx;
+       p0.py = ry;
+       p0.pz = 0;
+       p0.pw = 1;
+       d.px = C.px - p0.px;
+       d.py = C.py - p0.pz;
+       d.pz = C.pz - p0.pz;
+       d.pw = 0;
+      } else {
+       d.px = 3.0f*(-((double)sx)/2 + i + jitter_x + 0.5)/(double)sx;
+       d.py = 3.0f*(-((double)sy)/2 + j + jitter_y + 0.5)/(double)sy;
+       d.pz = -1;
+       d.pw = 0;
+       p0.px = 0;
+       p0.py = 0;
+       p0.pz = 0;
+       p0.pw = 1;
+      }
      }
-     d.pw = 0;
-     p0.px = 0;
-     p0.py = 0;
-     p0.pz = 0;
-     p0.pw = 1;
      matVecMult(cam->C2W, &p0);
      matVecMult(cam->C2W, &d);
      //printf("%f, %f, %f\n",d.px,d.py,d.pz);
