@@ -48,8 +48,7 @@ void buildScene(void)
  struct pointLS *l;
  struct point3D p;
 
- env_img = readPPMimage("Env_Map/building.ppm");
-    
+ env_img = readPPMimage("building.ppm");
     o=newSphere(.2,1,0,0.4,1,1,1,.1,1.23,17);
     //RotateY(o,PI);
     Scale(o,6,6,6);
@@ -64,15 +63,17 @@ void buildScene(void)
     invert(&o->T[0][0],&o->Tinv[0][0]);
     insertObject(o,&object_list);
     
-    o=newPlane(.2,1,0,1,1,1,.9,1,1,17);
+    o=newPlane(.2,1,0,1,1,1,.9,1,1,10);
     RotateX(o,PI/2);
     Scale(o,20,20,20);
     Translate(o,-.1,-4.2,20);
     invert(&o->T[0][0],&o->Tinv[0][0]);
-    insertObject(o,&object_list);
-    
- addAreaLight(1,15,.01,-1,0,0,16,12,4,25,.99,.99,1,&object_list,&light_list,0);
- addAreaLight(1,15,.01,-1,0,0,16,21.5,4,25,.99,.99,1,&object_list,&light_list,0);
+    loadTexture(o,"wood_tex.ppm");
+    insertObject(o,&object_list); 
+
+ addAreaLight(1,15,.01,-1,0,0,16,12,4,10,.99,.99,1,&object_list,&light_list,0);
+ addAreaLight(1,15,.01,-1,0,0,16,21.5,4,10,.99,.99,1,&object_list,&light_list,0);
+ 
  //addAreaLight(1,15,.01,-1,0,0,16,0,9,9,.99,.99,1,&object_list,&light_list,0);
     
  /* SPACE SCENE
@@ -437,9 +438,9 @@ int main(int argc, char *argv[])
  int i,j,k,l;			// Counters for pixel coordinates
  unsigned char *rgbIm;
  char VR_flag = 0;
- char DOF = 0;
- double F = 35; //Focal Length
- double R = .1; //Apature Radius
+ char DOF = 1;
+ double F = 11; //Focal Length
+ double R = .5; //Apature Radius
  struct point3D C; //Focal Point
 
  if (argc<5)
@@ -572,13 +573,14 @@ int main(int argc, char *argv[])
  double aa_res = atof(argv[3]);
  if (!antialiasing)
   aa_res = 1;
- //#pragma omp parallel for collapse(2)
+ #pragma omp parallel for collapse(2)
  for (int j=0;j<sy;j++)		// For each of the pixels in the image
  {
-  fprintf(stderr,"%d/%d, ",1+j,sy);
   for (int i=0;i<sx;i++)
   {
-   //fprintf(stderr,"%d, %d  ",i,j);
+   if(i==0){
+    fprintf(stderr,"%d/%d, ",1+j,sy);
+   }
    struct colourRGB pixelcol;
    memset(&pixelcol,0,sizeof(struct colourRGB));
    for (int k=0;k<aa_res;k++) {
@@ -619,19 +621,22 @@ int main(int argc, char *argv[])
       if(DOF){
        double rx = (drand48()*2 - 1)*R;
        double ry = (drand48()*2 - 1)*R;
-       d.px = 3.0f*(-((double)sx)/2 + i + 0.5)/(double)sx;
-       d.py = 3.0f*(-((double)sy)/2 + j + 0.5)/(double)sy;
+       d.px = 2*(-((double)sx)/2 + i + 0.5)/(double)sx;
+       d.py = 2*(-((double)sy)/2 + j + 0.5)/(double)sy;
        d.pz = -1;
+       d.pw = 0;
+       matVecMult(cam->C2W, &d);
        normalize(&d);
        C.px = F*d.px;
        C.py = F*d.py;
        C.pz = F*d.pz;
+       matVecMult(cam->W2C, &C);
        p0.px = rx;
        p0.py = ry;
        p0.pz = 0;
        p0.pw = 1;
        d.px = C.px - p0.px;
-       d.py = C.py - p0.pz;
+       d.py = C.py - p0.py;
        d.pz = C.pz - p0.pz;
        d.pw = 0;
       } else {
