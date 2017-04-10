@@ -135,6 +135,42 @@ struct object3D *newPlane(double ra, double rd, double rs, double rg, double r, 
  return(plane);
 }
 
+struct object3D *newCircle(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny)
+{
+    // Intialize a new plane with the specified parameters:
+    // ra, rd, rs, rg - Albedos for the components of the Phong model
+    // r, g, b, - Colour for this plane
+    // alpha - Transparency, must be set to 1 unless you are doing refraction
+    // r_index - Refraction index if you are doing refraction.
+    // shiny - Exponent for the specular component of the Phong model
+    
+    struct object3D *circ=(struct object3D *)calloc(1,sizeof(struct object3D));
+    
+    if (!circ) fprintf(stderr,"Unable to allocate new plane, out of memory!\n");
+    else
+    {
+        circ->alb.ra=ra;
+        circ->alb.rd=rd;
+        circ->alb.rs=rs;
+        circ->alb.rg=rg;
+        circ->col.R=r;
+        circ->col.G=g;
+        circ->col.B=b;
+        circ->alpha=alpha;
+        circ->r_index=r_index;
+        circ->shinyness=shiny;
+        circ->intersect=&circleIntersect;
+        circ->texImg=NULL;
+        memcpy(&circ->T[0][0],&eye4x4[0][0],16*sizeof(double));
+        memcpy(&circ->Tinv[0][0],&eye4x4[0][0],16*sizeof(double));
+        circ->textureMap=&texMap;
+        circ->frontAndBack=1;
+        circ->isLightSource=0;
+    }
+    return(circ);
+}
+
+
 struct object3D *newSphere(double ra, double rd, double rs, double rg, double r, double g, double b, double alpha, double r_index, double shiny)
 {
  // Intialize a new sphere with the specified parameters:
@@ -290,6 +326,42 @@ void planeIntersect(struct object3D *plane, struct ray3D *ray, double *lambda, s
  p->pw = 1;
 }
 
+void circleIntersect(struct object3D *circle, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b)
+{
+    // Computes and returns the value of 'lambda' at the intersection
+    // between the specified ray and the specified canonical plane.
+    
+    /////////////////////////////////
+    // TO DO: Complete this function.
+    /////////////////////////////////
+    struct ray3D modelRay;
+    rayTransform(ray,&modelRay,circle);
+    if (modelRay.d.pz == 0) {
+        *lambda = -1;
+        return;
+    }
+    *lambda = -modelRay.p0.pz/modelRay.d.pz;
+    p->px = modelRay.p0.px + *lambda*modelRay.d.px;
+    p->py = modelRay.p0.py + *lambda*modelRay.d.py;
+    double radius = sqrt(pow(p->px,2)+pow(p->py,2));
+    if (sqrt(pow(p->px,2)+pow(p->py,2)) > 1) {
+        *lambda = -1;
+        return;
+    }
+    n->px = 0;
+    n->py = 0;
+    n->pz = 1;
+    n->pw = 0;
+    normalTransform(n,n,circle);
+    normalize(n);
+    *a = atan2(p->px,p->py)/(2*PI) + 0.5;
+    *b = radius;
+    p->px = ray->p0.px + *lambda*ray->d.px;
+    p->py = ray->p0.py + *lambda*ray->d.py;
+    p->pz = ray->p0.pz + *lambda*ray->d.pz;
+    p->pw = 1;
+}
+
 void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda, struct point3D *p, struct point3D *n, double *a, double *b)
 {
  // Computes and returns the value of 'lambda' at the intersection
@@ -307,7 +379,16 @@ void sphereIntersect(struct object3D *sphere, struct ray3D *ray, double *lambda,
   *lambda = -1;
   return;
  }
- *lambda = (-B - sqrt(B*B - 4*A*C))/(2*A);
+ double intersect1 = (-B - sqrt(B*B - 4*A*C))/(2*A);
+ double intersect2 = (-B - sqrt(B*B - 4*A*C))/(2*A);
+ if(intersect1 < 0)
+  *lambda = intersect2;
+ else if (intersect2 < 0)
+  *lambda = intersect1;
+ else if(intersect1 < intersect2)
+  *lambda = intersect1;
+ else
+  *lambda = intersect2;
  n->px = (modelRay.p0.px + *lambda*modelRay.d.px);
  n->py = (modelRay.p0.py + *lambda*modelRay.d.py);
  n->pz = (modelRay.p0.pz + *lambda*modelRay.d.pz);
@@ -572,7 +653,7 @@ void insertPLS(struct pointLS *l, struct pointLS **list)
 
 void addAreaLight(float sx, float sy, float nx, float ny, float nz,\
                   float tx, float ty, float tz, int lx, int ly,\
-                  float r, float g, float b, struct object3D **o_list, struct pointLS **l_list)
+                  float r, float g, float b, struct object3D **o_list, struct pointLS **l_list, int circle_flag)
 {
  /*
    This function sets up and inserts a rectangular area light source
@@ -592,7 +673,11 @@ void addAreaLight(float sx, float sy, float nx, float ny, float nz,\
   // TO DO: (Assignment 4!)
   // Implement this function to enable area light sources
   /////////////////////////////////////////////////////
-  struct object3D *o = newPlane(1,0,0,0,r,g,b,1,1,0);
+  struct object3D *o;
+  if(circle_flag)
+   o = newCircle(1,0,0,0,r,g,b,1,1,0);
+  else
+   o = newPlane(1,0,0,0,r,g,b,1,1,0);
   Scale(o,sx,sy,1);
   struct point3D u,v,w;
   double R[4][4];
@@ -645,16 +730,34 @@ void addAreaLight(float sx, float sy, float nx, float ny, float nz,\
   struct pointLS *l;
   struct point3D p;
 
-  int i, j;
-  for(i=0; i<lx; i++){
-   for(j=0; j<ly; j++){
-    p.px = i/(double)lx -0.5;
-    p.py = j/(double)ly -0.5;
+  if(circle_flag){
+   int i;
+   double theta;
+   double r;
+   for(i=0; i<(lx*ly); i++){
+    theta = drand48()*2*PI;
+    r = sqrt(drand48());
+    p.px = r*cos(theta);
+    p.py = r*sin(theta);
     p.pz = 0;
     p.pw = 1;
     matVecMult(o->T,&p);
     l = newPLS(&p, r, g, b);
     insertPLS(l,l_list);
+   }
+  }
+  else{
+   int i, j;
+   for(i=0; i<lx; i++){
+    for(j=0; j<ly; j++){
+     p.px = 2*(i/(double)lx -0.5);
+     p.py = 2*(j/(double)ly -0.5);
+     p.pz = 0;
+     p.pw = 1;
+     matVecMult(o->T,&p);
+     l = newPLS(&p, r, g, b);
+     insertPLS(l,l_list);
+    }
    }
   }
 }
