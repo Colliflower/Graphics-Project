@@ -2,9 +2,11 @@ CSC418/2504 - Winter 2017
 Checklist for Assignment 3
 ----------------------------------------------------------------------------------
 
-Name: 
+Name: Trevor Anderson
+      Gavin DUMBDUMBHEAD
 
-Student ID:
+Student ID: 1000758003 (Trevor)
+            1000782539 (Gavin)
 
 -----------------------------------------------------------------------------------------
 
@@ -15,14 +17,14 @@ A. PLEASE ANSWER THE FOLLOWING QUESTIONS (your assignment will not be graded oth
 
    http://www.cs.brown.edu/~ls/teaching08.html
 
-   ___Yes   ___No
+    X Yes   ___No
 
 2. I understand that it is not okay to use code found online and represent it as my own work.
    Further, I understand that if caught with similarity software, I can be reprimanded by the
    department and will have to deal with the consequences of this.
 	
 
-   ___Yes   ___No
+    X Yes   ___No
 
    If you have used an external source, see 3 and report it there.
 
@@ -30,7 +32,7 @@ A. PLEASE ANSWER THE FOLLOWING QUESTIONS (your assignment will not be graded oth
    source (the penalties/grades will be assessed according to the policy stated in 
    http://www.cs.brown.edu/~ls/teaching08.html)
 
-   ___Yes   ___No
+   ___Yes    X No
 
 
    If you checked yes, please supply the following
@@ -52,21 +54,21 @@ B. PLACE AN (X) IN FRONT OF PORTIONS OF THE ASSIGNMENT THAT YOU COMPLETED IN FUL
 
 				Completed   Partial   Not done   Mark
 [10 marks]  Ray Casting
-
+                    X
 [15 marks]  Intersection	
             for spheres
-
+                    X
 [15 marks]  Intersection
 	    for square
-
+                    X
 [15 marks]  Normal transforms
-
+                    X
 [15 marks]  Local Phong
-
+                    X
 [10 marks]  Shadows
-
+                    X
 [15 marks]  Global reflection
-
+                    X
 [5 marks]   Report
 
 [TA assigned]  Penalty marks
@@ -74,3 +76,21 @@ B. PLACE AN (X) IN FRONT OF PORTIONS OF THE ASSIGNMENT THAT YOU COMPLETED IN FUL
 
 Total for A3:							/100
 
+
+-------------------   A4  -------------------
+
+
+Features added:
+    
+    Anti Aliasing
+    Area Light Sources
+    Cone objects
+    Cylinder objects
+    Glossy Surfaces
+    Depth of Field
+    Texture Mapping
+    Environment Mapping
+    Multi-Threading
+    Refraction
+    360 degree scene rendering - Equirectangular Mapping
+    Circular Planes and Area Lights
