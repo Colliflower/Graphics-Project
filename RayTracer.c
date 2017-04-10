@@ -48,6 +48,181 @@ void buildScene(void)
  struct pointLS *l;
  struct point3D p;
 
+env_img = readPPMimage("Env_Map/logcabin.ppm");
+
+    ////////////SNOWGLOBE/////////////////////
+    o=newSphere(.2,1,.6,0.15,1,1,1,.1,1.4,22);
+    Scale(o,7,7,7);
+    Translate(o,0,-2,15);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+    
+    o=newSphere(0,1,.6,0.15,1,1,1,0,1,22);;
+    Scale(o,5.5,5.5,5.5);
+    Translate(o,0,-2,15);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+
+    o=newCylinder(.2,1,.6,.2,.2,.2,.8,1,1,40);
+    Scale(o,6.8,6.8,-0.5);
+    RotateX(o,PI/2); 
+    Translate(o,0,-4.7,15);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+ 
+    o=newSphere(.2,1,.6,.5,1,1,1,1,1,5);
+    Scale(o,6.8,6.8,0.9);
+    RotateX(o,PI/2); 
+    Translate(o,0,-4.8,15);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+
+    ////////////////TREE///////////////////
+    double treex = -2;
+    double treez = 15;
+    //Trunk
+    o=newCylinder(.4,1,0,0.4,.2,.1,0,1,1,1);
+    Scale(o,.65,.65,-1);
+    RotateX(o,PI/2); 
+    Translate(o,treex,-4.3,treez);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+    //Lower part of tree
+    o=newCone(.4,1,0,0.4,0,.5,.2,1,1,1);
+    Translate(o,0,0,-1);
+    Scale(o,2,2,3);
+    RotateX(o,PI/2); 
+    RotateY(o,PI);
+    Translate(o,treex,-3.2,treez);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    loadTexture(o,"tree_tex2.ppm");
+    insertObject(o,&object_list);
+    //Upper part of tree
+    o=newCone(.4,1,0,0.4,0,.5,.2,1,1,1);
+    Translate(o,0,0,-1);
+    Scale(o,2,2,3);
+    Scale(o,0.8,0.8,0.8);
+    RotateX(o,PI/2);
+    RotateY(o,PI); 
+    Translate(o,treex,-1.5,treez);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    loadTexture(o,"tree_tex.ppm");
+    insertObject(o,&object_list);
+
+    ////////////////SNOWMAN///////////////////
+    double snowmanx = 2;
+    double snowmanz = 14;
+    /////////////HAT////////////////////////
+    o=newCylinder(.4,1,0,0.4,0,0,0,1,1,1);
+    Scale(o,.65,.65,-.1);
+    RotateX(o,PI/2);
+    RotateZ(o,-PI/12); 
+    Translate(o,0.6*sin(PI/12),-1.8+0.5*cos(PI/12),+0.5*sin(PI/12));
+    RotateY(o,PI/7);
+    Translate(o,snowmanx,0,snowmanz);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+
+    o=newCylinder(.4,1,0,0.4,0,0,0,1,1,1);
+    Scale(o,.4,.4,-.6);
+    RotateX(o,PI/2);
+    RotateZ(o,-PI/12); 
+    Translate(o,0.6*sin(PI/12),-1.8+0.5*cos(PI/12),+0.5*sin(PI/12));
+    RotateY(o,PI/7);
+    Translate(o,snowmanx,0,snowmanz);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+   
+    ///////////HEAD/////////////
+    //EYE
+    o=newSphere(.4,1,0,0.4,0,0,0,1,1,1);
+    Scale(o,0.1,0.1,0.01);
+    Translate(o,-0.6*sin(PI/8),-1.8+0.6*sin(PI/8),-0.6*cos(PI/8));
+    RotateY(o,PI/7);
+    Translate(o,snowmanx,0,snowmanz);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+    //EYE
+    o=newSphere(.4,1,0,0.4,0,0,0,1,1,1);
+    Scale(o,0.1,0.1,0.01);
+    Translate(o,0.6*sin(PI/8),-1.8+0.6*sin(PI/8),-0.6*cos(PI/8));
+    RotateY(o,PI/7);
+    Translate(o,snowmanx,0,snowmanz);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+    //NOSE
+    o=newCone(.4,1,0,0.4,1,0.6,0,1,1,1);
+    Translate(o,0,0,-1);
+    Scale(o,0.15,0.15,.5);
+    Translate(o,0,-1.8-0.6*sin(PI/36),-0.6*cos(PI/36));
+    RotateY(o,PI/7);
+    Translate(o,snowmanx,0,snowmanz);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+    //HEAD
+    o=newSphere(.5,1,0,0.4,1,1,1,1,1,1);
+    Scale(o,0.6,0.6,0.6);
+    Translate(o,0,-1.8,0);
+    RotateY(o,PI/7);
+    Translate(o,snowmanx,0,snowmanz);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+
+    ////////////////TORSO
+    //BUTTON
+    o=newSphere(.4,1,0,0.4,0,0,0,1,1,1);
+    Scale(o,0.1,0.1,0.1);
+    Translate(o,0,-2.8+0.8*sin(PI/6),-0.8*cos(PI/6));
+    RotateY(o,PI/7);
+    Translate(o,snowmanx,0,snowmanz);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+    //BUTTON
+    o=newSphere(.4,1,0,0.4,0,0,0,1,1,1);
+    Scale(o,0.1,0.1,0.1);
+    Translate(o,0,-2.8-0.8*sin(PI/12),-0.8*cos(PI/12));
+    RotateY(o,PI/7);
+    Translate(o,snowmanx,0,snowmanz);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+    //TORSO
+    o=newSphere(.5,1,0,0.4,1,1,1,1,1,1);
+    Scale(o,0.8,0.8,0.8);
+    Translate(o,0,-2.8,0);
+    RotateY(o,PI/7);
+    Translate(o,snowmanx,0,snowmanz);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+
+    /////////////////BASE
+    //BUTTON
+    o=newSphere(.4,1,0,0.4,0,0,0,1,1,1);
+    Scale(o,0.1,0.1,0.1);
+    Translate(o,0,-3.8+sin(PI/12),-cos(PI/12));
+    RotateY(o,PI/7);
+    Translate(o,snowmanx,0,snowmanz);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+    //BASE
+    o=newSphere(.5,1,0,0.4,1,1,1,1,1,1);
+    Scale(o,1,1,1);
+    Translate(o,0,-3.8,0);
+    RotateY(o,PI/7);
+    Translate(o,snowmanx,0,snowmanz);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    insertObject(o,&object_list);
+    
+
+    ///////////////////////WOODFLOOR////////////////////
+    o=newPlane(.2,1,0,.5,1,1,.9,1,1,19);
+    RotateX(o,PI/2);
+    Scale(o,20,20,20);
+    Translate(o,-.1,-4.7,20);
+    invert(&o->T[0][0],&o->Tinv[0][0]);
+    loadTexture(o,"wood_tex.ppm");
+    insertObject(o,&object_list);
+
+/*
  env_img = readPPMimage("building.ppm");
     o=newSphere(.2,1,0,0.4,1,1,1,.1,1.23,17);
     //RotateY(o,PI);
@@ -56,23 +231,23 @@ void buildScene(void)
     invert(&o->T[0][0],&o->Tinv[0][0]);
     insertObject(o,&object_list);
     
-    o=newSphere(.2,1,0,0.4,1,1,1,.1,1.23,17);
+    o=newSphere(.2,1,0,0.2,1,1,1,.1,1.23,17);
     //RotateY(o,PI);
     Scale(o,3,3,3);
     Translate(o,0,-2,11);
     invert(&o->T[0][0],&o->Tinv[0][0]);
     insertObject(o,&object_list);
     
-    o=newPlane(.2,1,0,1,1,1,.9,1,1,10);
+    o=newPlane(.2,1,0,1,1,1,.9,1,1,19);
     RotateX(o,PI/2);
     Scale(o,20,20,20);
     Translate(o,-.1,-4.2,20);
     invert(&o->T[0][0],&o->Tinv[0][0]);
     loadTexture(o,"wood_tex.ppm");
-    insertObject(o,&object_list); 
+    insertObject(o,&object_list); */
 
- addAreaLight(1,15,.01,-1,0,0,16,12,4,10,.99,.99,1,&object_list,&light_list,0);
- addAreaLight(1,15,.01,-1,0,0,16,21.5,4,10,.99,.99,1,&object_list,&light_list,0);
+ addAreaLight(4,20,0,-1,0,0,18,4,3,20,.99,.99,1,&object_list,&light_list,0);
+ //addAreaLight(17,1,0,-1,0,0,18,21.5,10,4,.99,.99,1,&object_list,&light_list,0);
  
  //addAreaLight(1,15,.01,-1,0,0,16,0,9,9,.99,.99,1,&object_list,&light_list,0);
     
@@ -352,7 +527,7 @@ void rayTrace(struct ray3D *ray, int depth, struct colourRGB *col, struct object
     r.pw = 0;
     normalize(&r);
     refrray = newRay(&p, &r);
-    rayTrace(refrray, depth+1, &refcol, obj);
+    rayTrace(refrray, depth, &refcol, obj);
     if (refcol.R != -1) {
      col->R = (1-obj->alpha)*refcol.R + obj->alpha*col->R;
      col->G = (1-obj->alpha)*refcol.G + obj->alpha*col->G;
@@ -439,9 +614,10 @@ int main(int argc, char *argv[])
  unsigned char *rgbIm;
  char VR_flag = 0;
  char DOF = 1;
- double F = 11; //Focal Length
- double R = .5; //Apature Radius
+ double F = 14; //Focal Length
+ double R = .25; //Apature Radius
  struct point3D C; //Focal Point
+ double theta,r; //Used to sample from circle
 
  if (argc<5)
  {
@@ -573,7 +749,7 @@ int main(int argc, char *argv[])
  double aa_res = atof(argv[3]);
  if (!antialiasing)
   aa_res = 1;
- #pragma omp parallel for collapse(2)
+ #pragma omp parallel for schedule(dynamic) num_threads(4)
  for (int j=0;j<sy;j++)		// For each of the pixels in the image
  {
   for (int i=0;i<sx;i++)
@@ -619,10 +795,12 @@ int main(int argc, char *argv[])
      }
      else {
       if(DOF){
-       double rx = (drand48()*2 - 1)*R;
-       double ry = (drand48()*2 - 1)*R;
-       d.px = 2*(-((double)sx)/2 + i + 0.5)/(double)sx;
-       d.py = 2*(-((double)sy)/2 + j + 0.5)/(double)sy;
+       theta = drand48()*2*PI;
+       r = R*sqrt(drand48());
+       double rx = r*cos(theta);
+       double ry = r*sin(theta);
+       d.px = 1.5*(-((double)sx)/2 + i + jitter_x + 0.5)/(double)sx;
+       d.py = 1.5*(-((double)sy)/2 + j + jitter_y + 0.5)/(double)sy;
        d.pz = -1;
        d.pw = 0;
        matVecMult(cam->C2W, &d);
@@ -640,8 +818,8 @@ int main(int argc, char *argv[])
        d.pz = C.pz - p0.pz;
        d.pw = 0;
       } else {
-       d.px = 3.0f*(-((double)sx)/2 + i + jitter_x + 0.5)/(double)sx;
-       d.py = 3.0f*(-((double)sy)/2 + j + jitter_y + 0.5)/(double)sy;
+       d.px = 1.5*(-((double)sx)/2 + i + jitter_x + 0.5)/(double)sx;
+       d.py = 1.5*(-((double)sy)/2 + j + jitter_y + 0.5)/(double)sy;
        d.pz = -1;
        d.pw = 0;
        p0.px = 0;
